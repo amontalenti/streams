@@ -1,0 +1,6 @@
+# build the slides / docs
+Sphinx
+Hieroglyph
+Flask
+livereload
+formic
