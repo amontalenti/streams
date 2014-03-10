@@ -13,15 +13,15 @@ Andrew Montalenti, CTO
 Agenda
 ======
 
-* Parse.ly technical overview
+* Parse.ly problem space
 * Architecture evolution
 * Organizing around logs (Kafka)
 * Aggregating the stream (Storm)
 * Real-time vs Batch tensions
 
-=============
-Parse.ly Tech
-=============
+======================
+Parse.ly problem space
+======================
 
 What is Parse.ly?
 =================
@@ -87,6 +87,14 @@ Summary data
 .. rst-class:: spaced
 
     .. image:: ./_static/summary_viz.png
+        :align: center
+
+Ranked data
+===========
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/comparative.png
         :align: center
 
 Benchmark data
@@ -165,20 +173,22 @@ More code devoted to ops, rather than business logic.
 And, it had big hardware demands
 ================================
 
-* **Scaling Out**: From 2010-2012, went from 3 to 80 nodes running in Rackspace Cloud
-* **Scaling Up**: From 2012-2013, ran a custom data center with 1 terabyte of RAM
-* **Scaling In**: From 2013-2014, started building support for more nuanced metrics
+**Scaling Out**: From 2010-2012, went from 3 to 80 nodes running in Rackspace Cloud.
 
-(Through all of this, heavy user of Amazon ELB and S3 for data collection
-and archiving, and EMR for Hadoop jobs.)
+**Scaling Up**: From 2012-2013, ran a custom data center with 1 terabyte of RAM.
+
+**Scaling In**: From 2013-2014, started building support for more nuanced metrics.
 
 And, data management challenges
 ===============================
 
-* Running multiple redundant data centers.
-* Need to ship real-time data everywhere.
-* Including data-identical production, staging, beta.
-* New schema designs and new DB technologies, too.
+Running multiple redundant data centers.
+
+Need to ship real-time data everywhere.
+
+Including data-identical production, staging, beta.
+
+New schema designs and new DB technologies, too.
 
 In short: it started to get messy
 =================================
@@ -315,6 +325,16 @@ These transformations often have complex dependencies:
 * repeated requests at identical URL rolled up by topic
 * top performing topics are snapshotted for rankings
 
+Workers and databases
+=====================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/queue_storage.png
+        :width: 80%
+        :align: center
+
+
 Worker problems
 ===============
 
@@ -373,8 +393,8 @@ Storm features
 Feature         Description
 =============== ====================================================================
 Speed           1,000,000 tuples per second per node, using Thrift and ZeroMQ
-Fault Tolerance Workers and Storm mgmt daemons self-heal in face of failure
-Parallelism     Computations run over a cluster, and parallelism is tuneable
+Fault Tolerance Workers and Storm management daemons self-heal in face of failure
+Parallelism     Tasks run on cluster w/ tuneable parallelism
 Guaranteed Msgs Tracks lineage of data tuples, providing an at-least-once guarantee
 Easy Code Mgmt  Several versions of code in a cluster; multiple languages supported
 Local Dev       Entire system can run in "local mode" for end-to-end testing
@@ -389,7 +409,7 @@ Concept         Description
 Stream          Unbounded sequence of data tuples with named fields
 Spout           A source of a Stream of tuples; typically reading from Kafka
 Bolt            Computation steps that consume Streams and emits new Streams
-Grouping        A way of partitioning data into a Bolt; for example: field vs shuffle
+Grouping        Way of partitioning data fed to a Bolt; for example: by field, shuffle
 Topology        Directed Acyclic Graph (DAG) describing Spouts, Bolts, & Groupings
 =============== =======================================================================
 
@@ -438,23 +458,191 @@ Word Count Tuple Tree
         :width: 70%
         :align: center
 
+==================
+Real-time vs Batch
+==================
+
+Queries over data
+=================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/all_data.png
+        :width: 70%
+        :align: center
+
+Sample data file
+================
+
+A slice of Twitter clickstream (``urls.json``):
+
+.. sourcecode:: json
+
+    {"urlref": "http://t.co/1234", 
+     "url": "http://theatlantic.com/1234", 
+      "ts": "2014-01-01T08:01:000Z"}
+    {"urlref": "http://t.co/1234", 
+     "url": "http://theatlantic.com/1234", 
+     "ts": "2014-01-01T08:02:000Z"}
+    {"urlref": "http://t.co/1234", 
+     "url": "http://theatlantic.com/1234", 
+     "ts": "2014-01-01T08:03:000Z"}
+    {"urlref": "http://t.co/1234", 
+     "url": "http://theatlantic.com/1234", 
+     "ts": "2014-01-01T08:04:000Z"}
+
+Pig example
+===========
+
+Several billion such records (with much more variety) can be processed to find
+tweets driving high amounts of traffic to news publishers.
+
+.. sourcecode:: sql
+
+    urls = LOAD 'urls.json'
+           USING JsonLoader(
+             'url:chararray, urlref:chararray');
+
+    url_group = GROUP urls BY (url);
+
+    url_count = FOREACH url_group 
+                GENERATE group, COUNT_STAR(urls) as clicks;
+
+    DUMP url_count;
+    --> (http://t.co/1234, 4)
+
+EMR cluster (lemur)
+===================
+
+.. sourcecode:: clojure
+
+    (defcluster pig-cluster
+        :master-instance-type "m1.large"
+        :slave-instance-type "m1.large"
+        :num-instances 2
+        :keypair "pig-integration"
+        :enable-debugging? false
+        :bootstrap-action.1 [
+            "s3://elasticmapreduce/libs/pig/pig-script"
+            "--base-path"
+            "s3://elasticmapreduce/libs/pig/"
+            "--install-pig"
+            "--pig-versions"
+            "latest"
+        ]
+        :runtime-jar 
+          "s3://elasticmapreduce/libs/script-runner/script-runner.jar"
+    )
+
+EMR Pig steps (lemur)
+=====================
+
+.. sourcecode:: clojure
+
+    (defstep url-counts-step 
+        :args.positional [
+            "s3://elasticmapreduce/libs/pig/pig-script"
+            "--base-path"
+            "s3://elasticmapreduce/libs/pig/"
+            "--pig-versions"
+            "latest"
+            "--run-pig-script"
+            "--args"
+            "-f"
+            "s3://parselypig/scripts/url_counts.pig"
+        ]
+    )
+
+    (fire! pig-cluster url-counts-step)
+
+Precomputed views
+=================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/precomputed_view.png
+        :width: 90%
+        :align: center
+
+Twitter click Spout (Storm)
+===========================
+
+.. sourcecode:: clojure
+
+    {"twitter-click-spout"
+        (shell-spout-spec
+            ;; Python Spout implementation:
+            ;; - fetches tweets from Kafka
+            ;; - emits (urlref, url, ts) tuples
+            ["python" "spouts/twitter_click.py"]
+            ;; Stream declaration:
+            ["urlref" "url" "ts"]
+        )
+    }
+
+Twitter click Bolt (Storm)
+==========================
+
+.. sourcecode:: clojure
+
+    {"twitter-count-bolt"
+        (shell-bolt-spec
+            ;; Bolt input: Spout and field grouping on urlref
+            {"twitter-click-spout" :field "urlref"}
+            ;; Python Bolt implementation:
+            ;; - maintains a mapping of urlref => count
+            ;; - increments as new clicks arrive
+            ["python" "bolts/twitter_count.py"]
+            ;; Emits latest click count for each tweet as new Stream
+            ["twitter_link" "clicks"]
+            :p 4
+        )
+    }
+        
+Combining Batch & Real-Time
+===========================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_and_hadoop.png
+        :width: 90%
+        :align: center
+
+"Lambda Architecture"
+=====================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/lambda_architecture.png
+        :width: 90%
+        :align: center
+
 
 ========
 Appendix
 ========
 
-Other Companies
-===============
+Other Log-Centric Companies
+===========================
 
     ============= ========= ========
     Company       Logs      Workers
     ============= ========= ========
-    Twitter       Kafka     Storm
+    LinkedIn      Kafka*    Samza
+    Twitter       Kafka     Storm*
     Spotify       Kafka     Storm
     Wikipedia     Kafka     Storm
     Outbrain      Kafka     Storm
     Loggly        Kafka     Storm
-    LinkedIn      Kafka     Samza
+    ============= ========= ========
+
+Alternatives
+============
+
+    ============= ========= ========
+    Company       Logs      Workers
+    ============= ========= ========
+    Yahoo         S4        S4
     Amazon        Kinesis   ???
     Github        Kestrel   ???
     Google        ???       Dremel*
@@ -474,7 +662,6 @@ Backend Stack
     MongoDB       sharded, replicated historical data
     Redis         real-time data; past 24h, minutely
     SolrCloud     content indexing & trends 
-    hll           memory-stable estimated cardinality
     Storm\*       **real-time** distributed task queue
     Kafka\*       **multi-consumer** data integration
     Pig\*         **batch** network data analysis
@@ -495,7 +682,6 @@ In early 2014, Amazon launched their i2 instance types:
 
 * $20/GB of RAM per month on-demand
 * 1/2 the price of Rackspace Cloud
-* Only 3X the fully-baked price of running your own colo
 * Big memory, performant CPU, and fast I/O: all three!
 * The golden age of analytics.
 
