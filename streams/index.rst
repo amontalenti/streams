@@ -301,6 +301,42 @@ Traditional queues (e.g. RabbitMQ / Redis):
 
 **Kafka solves all of these problems.**
 
+Kafka in Python (1)
+===================
+
+.. sourcecode:: python
+
+    import logging
+
+    from kazoo.client import KazooClient
+    from samsa.cluster import Cluster
+
+    log = logging.getLogger('test_capture_pageviews')
+
+    def _connect_kafka():
+        zk = KazooClient()
+        zk.start()
+        cluster = Cluster(zk)
+        queue = cluster\
+                    .topics['pixel_data']\
+                    .subscribe('test_capture_pageviews')
+        return queue
+
+Kafka in Python (2)
+===================
+
+.. sourcecode:: python
+
+    def pageview_stream():
+        queue = _connect_kafka()
+        count = 0
+        for msg in queue:
+            count += 1
+            if count % 1000 == 0:
+                queue.commit_offsets()
+            urlref, url, ts = parse_msg(msg)
+            yield urlref, url, ts
+
 ======================
 Aggregating the stream
 ======================
@@ -444,13 +480,10 @@ Running Cluster
         :width: 80%
         :align: center
 
-Real-time Word Count
-====================
+Tuple Tree
+==========
 
-...
-
-Word Count Tuple Tree
-=====================
+Tuple tree, anchoring, and retries.
 
 .. rst-class:: spaced
 
@@ -501,7 +534,7 @@ tweets driving high amounts of traffic to news publishers.
 
     urls = LOAD 'urls.json'
            USING JsonLoader(
-             'url:chararray, urlref:chararray');
+             'url:chararray, urlref:chararray, ts:chararray');
 
     url_group = GROUP urls BY (url);
 
@@ -520,18 +553,15 @@ EMR cluster (lemur)
         :master-instance-type "m1.large"
         :slave-instance-type "m1.large"
         :num-instances 2
-        :keypair "pig-integration"
+        :keypair "emr_jobs"
         :enable-debugging? false
         :bootstrap-action.1 [
-            "s3://elasticmapreduce/libs/pig/pig-script"
-            "--base-path"
-            "s3://elasticmapreduce/libs/pig/"
-            "--install-pig"
-            "--pig-versions"
-            "latest"
+            "install-pig"
+            (s3-libs "/pig/pig-script")
+            ["--base-path" (s3-libs "/pig/")
+            "--install-pig" "--pig-versions" "latest"]
         ]
-        :runtime-jar 
-          "s3://elasticmapreduce/libs/script-runner/script-runner.jar"
+        :runtime-jar (s3-libs "/script-runner/script-runner.jar")
     )
 
 EMR Pig steps (lemur)
@@ -539,17 +569,13 @@ EMR Pig steps (lemur)
 
 .. sourcecode:: clojure
 
-    (defstep url-counts-step 
+    (defstep url-counts-step
         :args.positional [
-            "s3://elasticmapreduce/libs/pig/pig-script"
-            "--base-path"
-            "s3://elasticmapreduce/libs/pig/"
-            "--pig-versions"
-            "latest"
-            "--run-pig-script"
-            "--args"
-            "-f"
-            "s3://parselypig/scripts/url_counts.pig"
+            (s3-libs "/pig/pig-script")
+            "--base-path" (s3-libs "/pig/")
+            "--pig-versions" "latest"
+            "--run-pig-script" "--args"
+            "-f" "s3://pystorm/url_counts.pig"
         ]
     )
 
@@ -564,7 +590,7 @@ Precomputed views
         :width: 90%
         :align: center
 
-Twitter click Spout (Storm)
+Twitter Click Spout (Storm)
 ===========================
 
 .. sourcecode:: clojure
@@ -572,15 +598,34 @@ Twitter click Spout (Storm)
     {"twitter-click-spout"
         (shell-spout-spec
             ;; Python Spout implementation:
-            ;; - fetches tweets from Kafka
+            ;; - fetches tweets (e.g. from Kafka)
             ;; - emits (urlref, url, ts) tuples
-            ["python" "spouts/twitter_click.py"]
+            ["python" "spouts_twitter_click.py"]
             ;; Stream declaration:
             ["urlref" "url" "ts"]
         )
     }
 
-Twitter click Bolt (Storm)
+Mock Spout in Python
+====================
+
+.. sourcecode:: python
+
+    import storm
+    import time
+
+    class TwitterClickSpout(storm.Spout):
+
+        def nextTuple(self):
+            urlref = "http://t.co/1234"
+            url = "http://theatlantic.com/1234"
+            ts = "2014-03-10T08:00:000Z"
+            storm.emit([urlref, url, ts])
+            time.sleep(0.1)
+
+    TwitterClickSpout().run()
+
+Twitter Count Bolt (Storm)
 ==========================
 
 .. sourcecode:: clojure
@@ -588,17 +633,60 @@ Twitter click Bolt (Storm)
     {"twitter-count-bolt"
         (shell-bolt-spec
             ;; Bolt input: Spout and field grouping on urlref
-            {"twitter-click-spout" :field "urlref"}
+            {"twitter-click-spout" ["urlref"]}
             ;; Python Bolt implementation:
-            ;; - maintains a mapping of urlref => count
+            ;; - maintains a Counter of urlref
             ;; - increments as new clicks arrive
-            ["python" "bolts/twitter_count.py"]
+            ["python" "bolts_twitter_count.py"]
             ;; Emits latest click count for each tweet as new Stream
             ["twitter_link" "clicks"]
             :p 4
         )
     }
-        
+
+Mock Bolt in Python
+===================
+
+.. sourcecode:: python
+
+    import storm
+
+    from collections import Counter
+
+    class TwitterCountBolt(storm.BasicBolt):
+
+        def initialize(self, conf, context):
+            self.counter = Counter()
+
+        def process(self, tup):
+            urlref, url, ts = tup.values
+            self.counter[urlref] += 1
+            storm.emit([urlref, self.counter[urlref]]) 
+
+    TwitterCountBolt().run() 
+ 
+Running a local cluster
+=======================
+
+.. sourcecode:: clojure
+
+    (defn run-local! []
+        (let [cluster (LocalCluster.)]
+            ;; submit the topology configured above
+            (.submitTopology cluster 
+                            ;; topology name
+                            "test-topology" 
+                            ;; topology settings
+                            {TOPOLOGY-DEBUG true} 
+                            ;; topology configuration
+                            (mk-topology))
+            ;; sleep for 5 seconds before...
+            (Thread/sleep 5000)
+            ;; shutting down the cluster
+            (.shutdown cluster)
+        ) 
+    )
+
 Combining Batch & Real-Time
 ===========================
 
@@ -617,6 +705,41 @@ Combining Batch & Real-Time
         :width: 90%
         :align: center
 
+Where are we in all this? (1)
+=============================
+
+    ========================== =================== =================
+    Component                  Current             Ideal
+    ========================== =================== =================
+    Realtime Data              Storm + Redis       Storm + Mongo
+    Historical Data            Storm + Mongo       New Mongo Schema
+    Visitor Data               Pig only            Storm + Cassandra
+    ========================== =================== =================
+
+Where are we in all this? (1)
+=============================
+
+    ========================== =================== =================
+    Component                  Current             Ideal
+    ========================== =================== =================
+    Recommendations            Queues + Workers    Storm + Solr/ES?
+    Crawling                   Queues + Workers    Storm + Scrapy?
+    Pig Mgmt                   Pig + boto          lemur?
+    Storm Mgmt                 petrel              pystorm?
+    ========================== =================== =================
+
+Clojure + Python
+================
+
+Opportunity for **Clojure & Python** to work together.
+
+**Clojure**: interop with JVM infrastructure -- Storm + Pig/Hadoop + AWS + EMR.
+
+**lein**: help with Java's classpath / packaging / dependency nightmare.
+
+**Python**: programming model for computation nodes & database persistence.
+
+**fabric**: deployment, monitoring, & remote cluster management.
 
 ========
 Appendix
