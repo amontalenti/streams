@@ -56,9 +56,9 @@ Crawl data:
 Velocity
 ========
 
-* average post <48h shelf life
-* many posts get most traffic in first few hours
-* major news events can cause bursty traffic
+* average post has **<48-hour shelf life**
+* many posts get **most traffic in first few hours**
+* major news events can cause **bursty traffic**
 
 .. image:: ./_static/pulse.png
     :width: 60%
@@ -67,10 +67,10 @@ Velocity
 Volume
 ======
 
-* top publishers write 1000's of posts per day
-* millions of posts in archive still getting traffic
-* Parse.ly tracks **8 billion pageviews per month**
-* Data from **over 250 million monthly unique browsers**
+* top publishers write **1000's of posts per day**
+* huge **long tail of posts** get traffic forever
+* Parse.ly currently tracks **8 billion pageviews per month**
+* ... from **over 250 million monthly unique browsers**
 
 Time series data
 ================
@@ -247,7 +247,8 @@ Feature         Description
 =============== ==================================================================
 Speed           100's of megabytes of reads/writes per sec from 1000's of clients
 Durability      Can use your entire disk to create a massive message backlog
-Availability    Cluster-oriented design allows for node failures without data loss
+Scalability     Cluster-oriented design allows for horizontal machine scaling
+Availability    Cluster-oriented design allows for node failures without data loss (in 0.8+)
 Multi-consumer  Many clients can read the same stream with no penalty
 =============== ==================================================================
 
@@ -260,8 +261,19 @@ Concept         Description
 Topic           A group of related messages (a stream)
 Producer        Procs that publish msgs to stream
 Consumer        Procs that subscribe to msgs from stream
-Broker          A cluster of Kafka machines that coordinates client/server comms
+Broker          An individual node in the Cluster
+Cluster         An arrangement of Brokers & Zookeeper nodes
+Offset          Coordinated state between Consumers and Brokers (in Zookeeper)
 =============== ==================================================================
+
+Kafka layout
+============
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/kafka_topology.png
+        :width: 80%
+        :align: center
 
 Kafka is a "distributed log"
 ============================
@@ -308,7 +320,10 @@ Kafka in Python (1)
 
     import logging
 
+    # generic Zookeeper library
     from kazoo.client import KazooClient
+
+    # Parse.ly's open source Kafka client library
     from samsa.cluster import Cluster
 
     log = logging.getLogger('test_capture_pageviews')
@@ -333,6 +348,8 @@ Kafka in Python (2)
         for msg in queue:
             count += 1
             if count % 1000 == 0:
+                # in this example, offsets are committed to 
+                # Zookeeper every 1000 messages
                 queue.commit_offsets()
             urlref, url, ts = parse_msg(msg)
             yield urlref, url, ts
@@ -383,13 +400,15 @@ Worker problems
 Meanwhile, in Batch land...
 ===========================
 
-... everything is peachy!
+... everything is **peachy**!
 
 When I have all my data available, I can just run Map/Reduce jobs.
 
+**Problem solved.**
+
 We use Apache Pig, and I can get all the gurantees I need, and scale up on EMR.
 
-... but, no ability to do this in real-time against the stream.
+... but, no ability to do this in real-time on the stream! :(
 
 Introducing Storm
 =================
@@ -403,22 +422,26 @@ Storm provides a set of **general primitives** for doing **real-time computation
 Hadoop primitives
 =================
 
-**Durable** Data Set, typically in **S3** or **HDFS**.
+**Durable** Data Set, typically from **S3**.
 
-**Mappers** and **Reducers** in a **job flow**.
+**HDFS** used for inter-process communication.
 
-**JobTracker** and **TaskTracker** manage execution.
+**Mappers** & **Reducers**; Pig's **JobFlow** is a **DAG**.
+
+**JobTracker** & **TaskTracker** manage execution.
 
 **Tuneable parallelism** + built-in **fault tolerance**.
 
 Storm primitives
 ================
 
-**Streaming Data** via **Spouts**, typically from **Kafka**.
+**Streaming** Data Set, typically from **Kafka**.
 
-**Bolts** assembled in a **Directed Acyclic Graph**.
+**ZeroMQ** used for inter-process communication.
 
-**Nimbus** & **Workers** handle execution.
+**Bolts** & **Spouts**; Storm's **Topology** is a **DAG**.
+
+**Nimbus** & **Workers** manage execution.
 
 **Tuneable parallelism** + built-in **fault tolerance**.
 
@@ -428,7 +451,7 @@ Storm features
 =============== ====================================================================
 Feature         Description
 =============== ====================================================================
-Speed           1,000,000 tuples per second per node, using Thrift and ZeroMQ
+Speed           1,000,000 tuples per second per node, using Kyro and ZeroMQ
 Fault Tolerance Workers and Storm management daemons self-heal in face of failure
 Parallelism     Tasks run on cluster w/ tuneable parallelism
 Guaranteed Msgs Tracks lineage of data tuples, providing an at-least-once guarantee
@@ -569,7 +592,7 @@ EMR Pig steps (lemur)
 
 .. sourcecode:: clojure
 
-    (defstep url-counts-step
+    (defstep twitter-count-step
         :args.positional [
             (s3-libs "/pig/pig-script")
             "--base-path" (s3-libs "/pig/")
@@ -579,7 +602,7 @@ EMR Pig steps (lemur)
         ]
     )
 
-    (fire! pig-cluster url-counts-step)
+    (fire! pig-cluster twitter-count-step)
 
 Precomputed views
 =================
@@ -661,6 +684,7 @@ Mock Bolt in Python
         def process(self, tup):
             urlref, url, ts = tup.values
             self.counter[urlref] += 1
+            # new count emitted to stream upon increment
             storm.emit([urlref, self.counter[urlref]]) 
 
     TwitterCountBolt().run() 
@@ -696,8 +720,8 @@ Combining Batch & Real-Time
         :width: 90%
         :align: center
 
-"Lambda Architecture"
-=====================
+Marz's Lambda Architecture
+==========================
 
 .. rst-class:: spaced
 
@@ -705,45 +729,128 @@ Combining Batch & Real-Time
         :width: 90%
         :align: center
 
-Where are we in all this? (1)
-=============================
+Parse.ly's Stream Architecture
+==============================
 
-    ========================== =================== =================
-    Component                  Current             Ideal
-    ========================== =================== =================
-    Realtime Data              Storm + Redis       Storm + Mongo
-    Historical Data            Storm + Mongo       New Mongo Schema
-    Visitor Data               Pig only            Storm + Cassandra
-    ========================== =================== =================
+.. rst-class:: spaced
 
-Where are we in all this? (2)
-=============================
+    .. image:: ./_static/parsely_architecture.png
+        :width: 90%
+        :align: center
 
-    ========================== =================== =================
-    Component                  Current             Ideal
-    ========================== =================== =================
-    Recommendations            Queues + Workers    Storm + Solr?
-    Crawling                   Queues + Workers    Storm + Scrapy?
-    Pig Mgmt                   Pig + boto          lemur?
-    Storm Mgmt                 petrel              pystorm?
-    ========================== =================== =================
+Where are we today? (1)
+=======================
 
-Clojure + Python
+    ============= ==========================================
+    Tool          Usage
+    ============= ==========================================
+    ELB + nginx   scalable data collection across web
+    S3            cheap, redundant storage of logs
+    Scrapy        customizable crawling & scraping
+    MongoDB       sharded, replicated historical data
+    Redis         real-time data; past 24h, minutely
+    SolrCloud     content indexing & trends 
+    Storm\*       **real-time** distributed task queue
+    Kafka\*       **multi-consumer** data integration
+    Pig\*         **batch** network data analysis
+    ============= ==========================================
+
+
+Where are we today? (2)
+=======================
+
+    ================ ======================= =====================
+    Component        Current                 Ideal
+    ================ ======================= =====================
+    Real-time        Storm + Redis           Storm + Mongo
+    Historical       Pig/Storm + Mongo       Evolved Mongo Schema
+    Visitor          Pig only                Pig/Storm + Cassandra
+    ================ ======================= =====================
+
+Where are we today? (3)
+=======================
+
+    ================== ======================= =====================
+    Component          Current                 Ideal
+    ================== ======================= =====================
+    Recommendations    Queues + Workers        Storm + Solr?
+    Crawling           Queues + Workers        Storm + Scrapy?
+    Pig Mgmt           Pig + boto              lemur?
+    Storm Mgmt         petrel                  pystorm?
+    ================== ======================= =====================
+
+Other Log-Centric Companies
+===========================
+
+    ============= ========= ========
+    Company       Logs      Workers
+    ============= ========= ========
+    LinkedIn      Kafka*    Samza
+    Twitter       Kafka     Storm*
+    Spotify       Kafka     Storm
+    Wikipedia     Kafka     Storm
+    Outbrain      Kafka     Storm
+    Loggly        Kafka     Storm
+    ============= ========= ========
+
+Alternative Approaches
+======================
+
+    ============= ========= ========
+    Company       Logs      Workers
+    ============= ========= ========
+    Yahoo         S4        S4
+    Amazon        Kinesis   ???
+    Github        Kestrel   ???
+    Google        ???       Dremel*
+    UC Berkeley   RDDs*     Spark*
+    Facebook      Scribe*   HBase*
+    ============= ========= ========
+
+Python + Clojure
 ================
 
-Opportunity for **Clojure & Python** to work together.
+Opportunity for **Python & Clojure** to work together.
 
-**Clojure**: interop with JVM infrastructure -- Storm + Pig/Hadoop + AWS + EMR.
+**Python**: core computations & DB persistence.
 
-**lein**: help with Java's classpath / packaging / dependency nightmare.
+**fabric**: deployment & remote server management.
 
-**Python**: programming model for computation nodes & database persistence.
+**Clojure**: interop with JVM infrastructure: Storm & Hadoop.
 
-**fabric**: deployment, monitoring, & remote cluster management.
+**lein**: manage Java's classpath & packaging nightmare.
+
+Python and JVM interop
+======================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/python_and_data.png
+        :width: 90%
+        :align: center
 
 ==========
 Conclusion
 ==========
+
+How times change...
+===================
+
+Two years ago, EC2's biggest memory box had 68GB of RAM & spinning disks.
+In early 2014, Amazon launched their ``i2`` instance types:
+
+    =============== ======== ======== =========
+    Instance        RAM      SSD (!)  Cores
+    =============== ======== ======== =========
+    ``i2.8xlarge``  244 GB   6.4 TB   32
+    ``i2.4xlarge``  122 GB   3.2 TB   16
+    ``i2.2xlarge``  61 GB    1.6 TB   8
+    =============== ======== ======== =========
+
+* Each <$20/GB of RAM per month on-demand
+* Big memory, performant CPU, and fast I/O: all three!
+
+**It's the golden age of analytics.**
 
 What we've learned
 ==================
@@ -778,94 +885,26 @@ What is becoming clear
     * Pig + Storm work today, and offer powerful abstractions.
     * Log-centric design (Kafka) will prep you for tomorrow.
 
+Ideal data architecture
+=======================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/ideal_architecture.png
+        :width: 90%
+        :align: center
+
 Questions?
 ==========
 
 Go forth and stream!
 
-Reach out:
-
-@amontalenti
-
-http://twitter.com/amontalenti
-
-========
-Appendix
-========
-
-Other Log-Centric Companies
-===========================
-
-    ============= ========= ========
-    Company       Logs      Workers
-    ============= ========= ========
-    LinkedIn      Kafka*    Samza
-    Twitter       Kafka     Storm*
-    Spotify       Kafka     Storm
-    Wikipedia     Kafka     Storm
-    Outbrain      Kafka     Storm
-    Loggly        Kafka     Storm
-    ============= ========= ========
-
-Alternatives
-============
-
-    ============= ========= ========
-    Company       Logs      Workers
-    ============= ========= ========
-    Yahoo         S4        S4
-    Amazon        Kinesis   ???
-    Github        Kestrel   ???
-    Google        ???       Dremel*
-    UC Berkeley   RDDs*     Spark*
-    Facebook      Scribe*   HBase*
-    ============= ========= ========
-
-Backend Stack
-=============
-
-    ============= ==========================================
-    Tool          Usage
-    ============= ==========================================
-    ELB + nginx   scalable data collection across web
-    S3            cheap, redundant storage of logs
-    Scrapy        customizable crawling & scraping
-    MongoDB       sharded, replicated historical data
-    Redis         real-time data; past 24h, minutely
-    SolrCloud     content indexing & trends 
-    Storm\*       **real-time** distributed task queue
-    Kafka\*       **multi-consumer** data integration
-    Pig\*         **batch** network data analysis
-    ============= ==========================================
-
-Moving to AWS
-=============
-
-In early 2014, Amazon launched their i2 instance types:
-
-    =========== ======== ======== =========
-    Instance    RAM      SSD      Cores
-    =========== ======== ======== =========
-    i2.8xlarge  244 GB   6.4 TB   32
-    i2.4xlarge  122 GB   3.2 TB   16
-    i2.2xlarge  61 GB    1.6 TB   8
-    =========== ======== ======== =========
-
-* $20/GB of RAM per month on-demand
-* 1/2 the price of Rackspace Cloud
-* Big memory, performant CPU, and fast I/O: all three!
-* The golden age of analytics.
-
-
-Contact Us
-==========
-
-Get in touch. We're hiring :)
+Parse.ly:
 
 * http://parse.ly
 * http://twitter.com/parsely
 
-And me:
+Me:
 
 * http://pixelmonkey.org
 * http://twitter.com/amontalenti
