@@ -559,7 +559,7 @@ tweets driving high amounts of traffic to news publishers.
            USING JsonLoader(
              'url:chararray, urlref:chararray, ts:chararray');
 
-    url_group = GROUP urls BY (url);
+    url_group = GROUP urls BY url;
 
     url_count = FOREACH url_group 
                 GENERATE group, COUNT_STAR(urls) as clicks;
@@ -729,6 +729,15 @@ Marz's Lambda Architecture
         :width: 90%
         :align: center
 
+Eventual Accuracy
+=================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/absorb_data.png
+        :width: 90%
+        :align: center
+
 Parse.ly's Stream Architecture
 ==============================
 
@@ -791,21 +800,21 @@ Other Log-Centric Companies
     Wikipedia     Kafka     Storm
     Outbrain      Kafka     Storm
     Loggly        Kafka     Storm
+    Netflix       Kafka     ???
     ============= ========= ========
 
 Alternative Approaches
 ======================
 
-    ============= ========= ========
+    ============= ========= ==========
     Company       Logs      Workers
-    ============= ========= ========
+    ============= ========= ==========
     Yahoo         S4        S4
     Amazon        Kinesis   ???
-    Github        Kestrel   ???
-    Google        ???       Dremel*
+    Google        ???       Millwheel*
+    Facebook      Scribe*   ???
     UC Berkeley   RDDs*     Spark*
-    Facebook      Scribe*   HBase*
-    ============= ========= ========
+    ============= ========= ==========
 
 Python + Clojure
 ================
@@ -884,6 +893,16 @@ What is becoming clear
     * Lots of active research going into making gap narrower.
     * Pig + Storm work today, and offer powerful abstractions.
     * Log-centric design (Kafka) will prep you for tomorrow.
+
+Parse.ly in 2014
+================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/parsely_near_ideal.png
+        :width: 85%
+        :align: center
+
 
 Ideal data architecture
 =======================
