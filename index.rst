@@ -894,16 +894,6 @@ What is becoming clear
     * Pig + Storm work today, and offer powerful abstractions.
     * Log-centric design (Kafka) will prep you for tomorrow.
 
-Parse.ly in 2014
-================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/parsely_near_ideal.png
-        :width: 85%
-        :align: center
-
-
 Ideal data architecture
 =======================
 
@@ -928,6 +918,24 @@ Me:
 * http://pixelmonkey.org
 * http://twitter.com/amontalenti
 
+.. raw:: html
+
+    <script type="text/javascript">//<![CDATA[
+    // Google Analytics
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-19296962-1']);
+    _gaq.push(['_setCustomVar',3,'year','2014',3],['_setCustomVar',4,'categories','computer-science open-source programming startups tech',3],['_trackPageview']);
+    (function () {
+        var ga = document.createElement('script');
+        ga.type = 'text/javascript';
+        ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+
+        var s = document.getElementsByTagName('script')[0];
+        s.parentNode.insertBefore(ga, s);
+    })();
+    //]]></script>
+
 .. ifnotslides::
 
     .. raw:: html
@@ -951,3 +959,5 @@ Me:
             $(this).find("td:first").css("background-color", "#eee"); 
         });
         </script>
+
+
