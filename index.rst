@@ -799,7 +799,7 @@ Other Log-Centric Companies
     Spotify       Kafka     Storm
     Wikipedia     Kafka     Storm
     Outbrain      Kafka     Storm
-    Loggly        Kafka     Storm
+    LivePerson    Kafka     Storm
     Netflix       Kafka     ???
     ============= ========= ========
 
