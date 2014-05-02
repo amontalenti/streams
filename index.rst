@@ -20,9 +20,9 @@ Agenda
 * Aggregating the stream (Storm)
 * Organizing around logs (Kafka)
 
-======================
-Parse.ly problem space
-======================
+=================
+What is Parse.ly?
+=================
 
 What is Parse.ly?
 =================
@@ -44,6 +44,15 @@ Core Value
 Gives web content teams a clear understanding about 
 **what readers want** and how to deliver it to them 
 in the most effective way.
+
+Answers questions for journalists and editors, like:
+
+* What stories are **most popular in the last 4 hours**?
+* Which **authors drive the most Facebook traffic**?
+* What is the relationship between **sharing and reading**?
+
+For product teams, our API enables **dynamic content
+recommendations** which can be implemented in minutes.
 
 Variety of Data
 ===============
@@ -208,46 +217,6 @@ In short: it started to get messy
 
     .. image:: ./_static/monitors.jpg
         :width: 90%
-        :align: center
-
-======================
-Organizing around logs
-======================
-
-LinkedIn's lattice problem
-==========================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/lattice.png
-        :width: 100%
-        :align: center
-
-Enter the unified log
-=====================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/unified_log.png
-        :width: 100%
-        :align: center
-
-Log-centric is simpler
-======================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/log_centric.png
-        :width: 65%
-        :align: center
-
-Parse.ly is log-centric, too
-============================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/parsely_log_arch.png
-        :width: 80%
         :align: center
 
 Introducing Storm
@@ -452,42 +421,45 @@ Running a local cluster
         ) 
     )
 
-Parse.ly's Stream Architecture
-==============================
+======================
+Organizing around logs
+======================
+
+LinkedIn's lattice problem
+==========================
 
 .. rst-class:: spaced
 
-    .. image:: ./_static/parsely_architecture.png
-        :width: 90%
+    .. image:: ./_static/lattice.png
+        :width: 100%
         :align: center
 
-Other Log-Centric Companies
-===========================
+Enter the unified log
+=====================
 
-    ============= ========= ========
-    Company       Logs      Workers
-    ============= ========= ========
-    LinkedIn      Kafka*    Samza
-    Twitter       Kafka     Storm*
-    Spotify       Kafka     Storm
-    Wikipedia     Kafka     Storm
-    Outbrain      Kafka     Storm
-    LivePerson    Kafka     Storm
-    Netflix       Kafka     ???
-    ============= ========= ========
+.. rst-class:: spaced
 
-Alternative Approaches
+    .. image:: ./_static/unified_log.png
+        :width: 100%
+        :align: center
+
+Log-centric is simpler
 ======================
 
-    ============= ========= ==========
-    Company       Logs      Workers
-    ============= ========= ==========
-    Yahoo         S4        S4
-    Amazon        Kinesis   ???
-    Google        ???       Millwheel*
-    Facebook      Scribe*   ???
-    UC Berkeley   RDDs*     Spark*
-    ============= ========= ==========
+.. rst-class:: spaced
+
+    .. image:: ./_static/log_centric.png
+        :width: 65%
+        :align: center
+
+Parse.ly is log-centric, too
+============================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/parsely_log_arch.png
+        :width: 80%
+        :align: center
 
 
 Introducing Kafka
@@ -605,46 +577,6 @@ Kafka in Python (2)
             urlref, url, ts = parse_msg(msg)
             yield urlref, url, ts
 
-Meanwhile, in Batch land...
-===========================
-
-... everything is **peachy**!
-
-When I have all my data available, I can just run Map/Reduce jobs.
-
-**Problem solved.**
-
-We use Apache Pig, and I can get all the gurantees I need, and scale up on EMR.
-
-... but, no ability to do this in real-time on the stream! :(
-
-Combining Batch & Real-Time
-===========================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/storm_and_hadoop.png
-        :width: 90%
-        :align: center
-
-Marz's Lambda Architecture
-==========================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/lambda_architecture.png
-        :width: 90%
-        :align: center
-
-Eventual Accuracy
-=================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/absorb_data.png
-        :width: 90%
-        :align: center
-
 Python + Clojure
 ================
 
@@ -671,6 +603,34 @@ Python and JVM interop
     .. image:: ./_static/python_and_data.png
         :width: 90%
         :align: center
+
+Other Log-Centric Companies
+===========================
+
+    ============= ========= ========
+    Company       Logs      Workers
+    ============= ========= ========
+    LinkedIn      Kafka*    Samza
+    Twitter       Kafka     Storm*
+    Spotify       Kafka     Storm
+    Wikipedia     Kafka     Storm
+    Outbrain      Kafka     Storm
+    LivePerson    Kafka     Storm
+    Netflix       Kafka     ???
+    ============= ========= ========
+
+Alternative Approaches
+======================
+
+    ============= ========= ==========
+    Company       Logs      Workers
+    ============= ========= ==========
+    Yahoo         S4        S4
+    Amazon        Kinesis   ???
+    Google        ???       Millwheel*
+    Facebook      Scribe*   ???
+    UC Berkeley   RDDs*     Spark*
+    ============= ========= ==========
 
 ==========
 Conclusion
