@@ -4,6 +4,8 @@ Real-time Streams & Logs
 
 Andrew Montalenti, CTO
 
+Keith Bourgoin, Backend Lead
+
 .. rst-class:: logo
 
     .. image:: ./_static/parsely.png
@@ -26,7 +28,7 @@ Parse.ly problem space
 What is Parse.ly?
 =================
 
-Analytics for digital storytellers.
+Web content analytics for digital storytellers.
 
     .. image:: ./_static/banner_01.png
         :align: center
@@ -37,18 +39,27 @@ Analytics for digital storytellers.
     .. image:: ./_static/banner_04.png
         :align: center
 
-Variety
-=======
+Core Value
+==========
+
+Gives web content teams a clear understanding about 
+**what readers want** and how to deliver it to them 
+in the most effective way.
+
+Variety of Data
+===============
 
 Audience data:
-    * visits
+    * visitors
     * sessions
 
 Engagement data:
-    * views / time spent
+    * page views
+    * time spent
     * social shares
 
-Crawl data:
+Content data:
+    * headline
     * keywords / topics
     * author / section / tag
 
@@ -69,7 +80,7 @@ Volume
 
 * top publishers write **1000's of posts per day**
 * huge **long tail of posts** get traffic forever
-* Parse.ly currently tracks **8 billion pageviews per month**
+* Parse.ly tracks **8 billion page views per month**
 * ... from **over 250 million monthly unique browsers**
 
 Time series data
