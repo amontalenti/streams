@@ -299,84 +299,86 @@ Tuple tree, anchoring, and retries.
     :width: 70%
     :align: center
 
-Twitter Click Spout (Storm)
+Word Stream Spout (Storm)
+=========================
+
+.. sourcecode:: clojure
+
+    ;; spout configuration
+    {"word-spout" (shell-spout-spec
+          ;; Python Spout implementation:
+          ;; - fetches words (e.g. from Kafka)
+            ["python" "words.py"]
+          ;; - emits (word,) tuples
+            ["word"]
+          )
+    }
+
+Word Stream Spout in Python
 ===========================
 
-.. sourcecode:: clojure
-
-    {"twitter-click-spout"
-        (shell-spout-spec
-            ;; Python Spout implementation:
-            ;; - fetches tweets (e.g. from Kafka)
-            ;; - emits (urlref, url, ts) tuples
-            ["python" "spouts_twitter_click.py"]
-            ;; Stream declaration:
-            ["urlref" "url" "ts"]
-        )
-    }
-
-Mock Spout in Python
-====================
-
 .. sourcecode:: python
 
-    import storm
-    import time
+    import itertools
 
-    class TwitterClickSpout(storm.Spout):
+    from streamparse import storm
+
+    class WordSpout(storm.Spout):
+
+        def initialize(self, conf, ctx):
+            self.words = itertools.cycle(['dog', 'cat',
+                                          'zebra', 'elephant'])
 
         def nextTuple(self):
-            urlref = "http://t.co/1234"
-            url = "http://theatlantic.com/1234"
-            ts = "2014-03-10T08:00:000Z"
-            storm.emit([urlref, url, ts])
-            time.sleep(0.1)
+            word = next(self.words)
+            storm.emit([word])
 
-    TwitterClickSpout().run()
+    WordSpout().run()
 
-Twitter Count Bolt (Storm)
-==========================
+Word Count Bolt (Storm)
+=======================
 
 .. sourcecode:: clojure
 
-    {"twitter-count-bolt"
-        (shell-bolt-spec
-            ;; Bolt input: Spout and field grouping on urlref
-            {"twitter-click-spout" ["urlref"]}
-            ;; Python Bolt implementation:
-            ;; - maintains a Counter of urlref
-            ;; - increments as new clicks arrive
-            ["python" "bolts_twitter_count.py"]
-            ;; Emits latest click count for each tweet as new Stream
-            ["twitter_link" "clicks"]
-            :p 4
-        )
+    ;; bolt configuration
+    {"count-bolt" (shell-bolt-spec
+           ;; Bolt input: Spout and field grouping on word
+             {"word-spout" ["word"]}
+           ;; Python Bolt implementation:
+           ;; - maintains a Counter of word
+           ;; - increments as new words arrive
+             ["python" "wordcount.py"]
+           ;; Emits latest word count for most recent word
+             ["word" "count"]
+           ;; parallelism = 2
+             :p 2
+           )
     }
 
-Mock Bolt in Python
-===================
+Word Count Bolt in Python
+=========================
 
 .. sourcecode:: python
-
-    import storm
 
     from collections import Counter
 
-    class TwitterCountBolt(storm.BasicBolt):
+    from streamparse import storm
 
-        def initialize(self, conf, context):
-            self.counter = Counter()
+    class WordCounter(storm.Bolt):
+
+        def initialize(self, conf, ctx):
+            self.counts = Counter()
 
         def process(self, tup):
-            urlref, url, ts = tup.values
-            self.counter[urlref] += 1
-            # new count emitted to stream upon increment
-            storm.emit([urlref, self.counter[urlref]]) 
+            word = tup.values[0]
+            self.counts[word] += 1
+            storm.emit([word, self.counts[word]])
+            storm.log('%s: %d' % (word, self.counts[word]))
 
-    TwitterCountBolt().run() 
+    WordCounter().run()
  
-Running a local cluster
-=======================
+Running a local cluster (Clojure, sorry!)
+=========================================
 
 .. sourcecode:: clojure
 
@@ -385,17 +387,78 @@ Running a local cluster
             ;; submit the topology configured above
             (.submitTopology cluster 
                             ;; topology name
-                            "test-topology" 
+                            "wordcount-topology"
                             ;; topology settings
                             {TOPOLOGY-DEBUG true} 
                             ;; topology configuration
-                            (mk-topology))
+                            (mk-wordcount-topology))
             ;; sleep for 5 seconds before...
             (Thread/sleep 5000)
             ;; shutting down the cluster
             (.shutdown cluster)
         ) 
     )
+
+streamparse
+===========
+
+``sparse`` provides a CLI front-end to ``streamparse``, a framework for
+creating Python projects for running, debugging, and submitting Storm
+topologies for data processing. (*still in development*)
+
+After installing the ``lein`` (only dependency), you can run::
+
+    pip install streamparse
+
+This will offer a command-line tool, ``sparse``. Use::
+
+    sparse quickstart
+
+Running and debugging
+=====================
+
+You can then run the local Storm topology using::
+
+    sparse run
+
+e.g. for wordcount example::
+
+    Running wordcount topology...
+    Options: {:spec "topologies/wordcount.clj", ...}
+    #<StormTopology StormTopology(spouts:{word-spout=...
+    ... lots of output ...
+    storm.daemon.nimbus - Starting Nimbus with conf {...
+    storm.daemon.nimbus - Using default scheduler
+    storm.daemon.supervisor - Starting Supervisor with conf {...
+    storm.daemon.supervisor - Starting supervisor with id 4960ac74...
+    storm.daemon.nimbus - Received topology submission with conf {...
+    ... lots of output ...
+
+Packaging and submitting
+========================
+
+To package your toplogy for a Storm cluster, use::
+
+    sparse package topologies/wordcount.clj
+
+To submit your Storm topology locally, use::
+
+    sparse submit topologies/wordcount.clj
+
+To submit your Storm topology to a remotely-running production Storm cluster, use::
+
+    sparse submit topologies/wordcount.clj --env=prod
+
+Monitoring
+==========
+
+To monitor a running Storm topology in production, use::
+
+    sparse monitor --env=prod
+
+To tail all the log files for a running topology::
+
+    sparse tail --env=prod
 
 ======================
 Organizing around logs
