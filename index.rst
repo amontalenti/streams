@@ -103,35 +103,27 @@ Time series data
 Summary data
 ============
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/summary_viz.png
-        :align: center
+.. image:: ./_static/summary_viz.png
+    :align: center
 
 Ranked data
 ===========
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/comparative.png
-        :align: center
+.. image:: ./_static/comparative.png
+    :align: center
 
 Benchmark data
 ==============
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/benchmarked_viz.png
-        :align: center
+.. image:: ./_static/benchmarked_viz.png
+    :align: center
 
 Information radiators
 =====================
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/glimpse.png
-        :width: 100%
-        :align: center
+.. image:: ./_static/glimpse.png
+    :width: 100%
+    :align: center
 
 ======================
 Architecture evolution
@@ -140,20 +132,16 @@ Architecture evolution
 Stack Overview
 ==============
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/oss_logos.png
-        :width: 90%
-        :align: center
+.. image:: ./_static/oss_logos.png
+    :width: 90%
+    :align: center
 
 Queues and workers
 ==================
 
-.. rst-class:: spaced
-
-    .. image:: /_static/queues_and_workers.png
-        :width: 90%
-        :align: center
+.. image:: /_static/queues_and_workers.png
+    :width: 90%
+    :align: center
 
 **Queues**: RabbitMQ => Redis => ZeroMQ
 
@@ -173,11 +161,9 @@ Traditional queues (e.g. RabbitMQ / Redis):
 Lots of moving parts
 ====================
 
-.. rst-class:: spaced
-
-    .. image:: /_static/tech_stack.png
-        :width: 90%
-        :align: center
+.. image:: /_static/tech_stack.png
+    :width: 90%
+    :align: center
 
 
 To add more features...
@@ -194,11 +180,9 @@ Workers and databases
 
 Different workers-and-queues would talk to different databases.
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/queue_storage.png
-        :width: 80%
-        :align: center
+.. image:: ./_static/queue_storage.png
+    :width: 80%
+    :align: center
 
 
 Worker problems
@@ -213,11 +197,9 @@ Worker problems
 In short: it started to get messy
 =================================
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/monitors.jpg
-        :width: 90%
-        :align: center
+.. image:: ./_static/monitors.jpg
+    :width: 90%
+    :align: center
 
 Introducing Storm
 =================
@@ -284,11 +266,9 @@ Topology        Directed Acyclic Graph (DAG) describing Spouts, Bolts, & Groupin
 Wired Topology
 ==============
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/topology.png
-        :width: 80%
-        :align: center
+.. image:: ./_static/topology.png
+    :width: 80%
+    :align: center
 
 
 Storm cluster concepts
@@ -306,22 +286,18 @@ Nimbus          Coordinates work among Workers/Supervisors; maintains cluster st
 Running Cluster
 ===============
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/cluster.png
-        :width: 80%
-        :align: center
+.. image:: ./_static/cluster.png
+    :width: 80%
+    :align: center
 
 Tuple Tree
 ==========
 
 Tuple tree, anchoring, and retries.
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/wordcount.png
-        :width: 70%
-        :align: center
+.. image:: ./_static/wordcount.png
+    :width: 70%
+    :align: center
 
 Twitter Click Spout (Storm)
 ===========================
@@ -428,39 +404,30 @@ Organizing around logs
 LinkedIn's lattice problem
 ==========================
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/lattice.png
-        :width: 100%
-        :align: center
+.. image:: ./_static/lattice.png
+    :width: 100%
+    :align: center
 
 Enter the unified log
 =====================
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/unified_log.png
-        :width: 100%
-        :align: center
+.. image:: ./_static/unified_log.png
+    :width: 100%
+    :align: center
 
 Log-centric is simpler
 ======================
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/log_centric.png
-        :width: 65%
-        :align: center
+.. image:: ./_static/log_centric.png
+    :width: 65%
+    :align: center
 
 Parse.ly is log-centric, too
 ============================
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/parsely_log_arch.png
-        :width: 80%
-        :align: center
-
+.. image:: ./_static/parsely_log_arch.png
+    :width: 80%
+    :align: center
 
 Introducing Kafka
 =================
@@ -492,11 +459,9 @@ Offset          Coordinated state between Consumers and Brokers (in Zookeeper)
 Kafka layout
 ============
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/kafka_topology.png
-        :width: 80%
-        :align: center
+.. image:: ./_static/kafka_topology.png
+    :width: 80%
+    :align: center
 
 Kafka is a "distributed log"
 ============================
@@ -516,11 +481,9 @@ Consumers can **share identical logs easily**.
 Multi-consumer
 ==============
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/multiconsumer.png
-        :width: 60%
-        :align: center
+.. image:: ./_static/multiconsumer.png
+    :width: 60%
+    :align: center
 
 Even if Kafka's availability and scalability story isn't interesting to you,
 the **multi-consumer story should be**.
@@ -598,11 +561,9 @@ teach you a little Clojure from a Python perspective!
 Python and JVM interop
 ======================
 
-.. rst-class:: spaced
-
-    .. image:: ./_static/python_and_data.png
-        :width: 90%
-        :align: center
+.. image:: ./_static/python_and_data.png
+    :width: 90%
+    :align: center
 
 Other Log-Centric Companies
 ===========================

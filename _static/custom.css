@@ -19,3 +19,7 @@
 table td {
     padding: 7px !important;
 }
+
+article h2 {
+    margin-bottom: 30px;
+}
