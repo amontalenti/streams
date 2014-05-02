@@ -568,30 +568,30 @@ Python and JVM interop
 Other Log-Centric Companies
 ===========================
 
-    ============= ========= ========
-    Company       Logs      Workers
-    ============= ========= ========
-    LinkedIn      Kafka*    Samza
-    Twitter       Kafka     Storm*
-    Spotify       Kafka     Storm
-    Wikipedia     Kafka     Storm
-    Outbrain      Kafka     Storm
-    LivePerson    Kafka     Storm
-    Netflix       Kafka     ???
-    ============= ========= ========
+============= ========= ========
+Company       Logs      Workers
+============= ========= ========
+LinkedIn      Kafka*    Samza
+Twitter       Kafka     Storm*
+Spotify       Kafka     Storm
+Wikipedia     Kafka     Storm
+Outbrain      Kafka     Storm
+LivePerson    Kafka     Storm
+Netflix       Kafka     ???
+============= ========= ========
 
 Alternative Approaches
 ======================
 
-    ============= ========= ==========
-    Company       Logs      Workers
-    ============= ========= ==========
-    Yahoo         S4        S4
-    Amazon        Kinesis   ???
-    Google        ???       Millwheel*
-    Facebook      Scribe*   ???
-    UC Berkeley   RDDs*     Spark*
-    ============= ========= ==========
+============= ========= ==========
+Company       Logs      Workers
+============= ========= ==========
+Yahoo         S4        S4
+Amazon        Kinesis   ???
+Google        ???       Millwheel*
+Facebook      Scribe*   ???
+UC Berkeley   RDDs*     Spark*
+============= ========= ==========
 
 ==========
 Conclusion
