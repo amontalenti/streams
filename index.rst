@@ -600,35 +600,12 @@ Conclusion
 What we've learned
 ==================
 
-.. rst-class:: build
-
-    * There is no **silver bullet** database technology.
-    * Especially for data problems with "the three V's".
-    * Log storage is very cheap, and getting cheaper.
-    * "Timestamped facts" is rawest form of data available.
-    * Organizing around logs is a wise decision.
-
-What we're learning
-===================
-
-.. rst-class:: build
-
-    * Maybe databases aren't databases, but are just **indexes**.
-    * Database isn't endpoint for data, but a **transformation**.
-    * Duplicating data across databases isn't evil...
-    * ... especially for query flexibility and latency ...
-    * ... but only if **master data set makes rebuilds easy**!
-
-What is becoming clear
-======================
-
-.. rst-class:: build
-
-    * There is a gap between Batch and Real-Time processing.
-    * But, it may not be there for long.
-    * Lots of active research going into making gap narrower.
-    * Pig + Storm work today, and offer powerful abstractions.
-    * Log-centric design (Kafka) will prep you for tomorrow.
+* There is no **silver bullet** data processing technology.
+* Especially for data problems with "the three V's".
+* Log storage is very cheap, and getting cheaper.
+* "Timestamped facts" is rawest form of data available.
+* Storm and Kafka allow you to develop atop those facts.
+* Organizing around real-time logs is a wise decision.
 
 Questions?
 ==========
