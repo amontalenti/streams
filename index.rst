@@ -418,6 +418,21 @@ To tail all the log files for a running topology::
 Organizing around logs
 ======================
 
+Not all logs are applicaton logs
+================================
+
+A "log" could be any stream of structured data:
+
+
+* Web logs
+* Raw data waiting to be processed
+* Partially processed data
+* Database operations (e.g. mongo's oplog)
+
+.. note::
+    * Not what's going into logstash
+    * Log as a basic primitive for passing structured data around
+
 LinkedIn's lattice problem
 ==========================
 
@@ -446,18 +461,33 @@ Parse.ly is log-centric, too
     :width: 80%
     :align: center
 
-Introducing Kafka
-=================
+.. note::
+    * Kafka is a unified data store for intermediate data steps
+    * Used to "fan out" data to consuming services
+    * Makes adding new services trivial
+    * 10:1 generated to execute ratio for mongo ops
 
-=============== ==================================================================
-Feature         Description
-=============== ==================================================================
-Speed           100's of megabytes of reads/writes per sec from 1000's of clients
-Durability      Can use your entire disk to create a massive message backlog
-Scalability     Cluster-oriented design allows for horizontal machine scaling
-Availability    Cluster-oriented design allows for node failures without data loss (in 0.8+)
-Multi-consumer  Many clients can read the same stream with no penalty
-=============== ==================================================================
+Introducing Apache Kafka
+========================
+
+Log centric message passing system developed at LinkedIn.
+
+Designed for throughput and extremely efficient resource use.
+
+    * Persists to disk, but in-memory serving of recent data
+    * Little to no overhead for addition consumers
+    * Scalable to tens of thousands of messages per second
+
+As of 0.8, full replication of topic data.
+
+.. note::
+    * Halfway between pub/sub and message passing
+    * Our Stats:
+
+      * 3 m1.medium instances w/1TB EBS
+      * 1 core / 2.75G memory
+      * 6k in / 16k out
+      * 75mbps in / 180mbps out
 
 Kafka concepts
 ==============
@@ -466,19 +496,33 @@ Kafka concepts
 Concept         Description
 =============== ==================================================================
 Topic           A group of related messages (a stream)
-Producer        Procs that publish msgs to stream
-Consumer        Procs that subscribe to msgs from stream
+Producer        Publishes messages to stream
+Consumer Group  Group of related processes reading a topic
 Broker          An individual node in the Cluster
 Cluster         An arrangement of Brokers & Zookeeper nodes
-Offset          Coordinated state between Consumers and Brokers (in Zookeeper)
+Offset          Point in a topic that the consumer has read to
 =============== ==================================================================
 
-Kafka layout
-============
+.. note::
+    * Offsets make it like non-ephemeral pub-sub
 
-.. image:: ./_static/kafka_topology.png
-    :width: 80%
-    :align: center
+What's the catch?
+=================
+
+Replication isn't perfect. Network partitions can cause problems.
+
+No out of order acknowldegement
+
+    * "Offset" is a marker of where the consumer is in a log, nothing more
+    * On a restart, you know where to start reading, but not if individual
+      messages before the stored offset were fully processed.
+    * In practice, this isn't as much of a problem as it sounds.
+
+.. note::
+    * Not as much of a problem if you batch and update offset once batch
+      is done
+    * Just takes some occasionally clever ways of handling messages
+
 
 Kafka is a "distributed log"
 ============================
@@ -487,23 +531,29 @@ Topics are **logs**, not queues.
 
 Consumers **read into offsets of the log**.
 
-Consumers **do not "eat" messages**.
-
 Logs are **maintained for a configurable period of time**.
 
 Messages can be **"replayed"**.
 
 Consumers can **share identical logs easily**.
 
+.. note::
+    * Consumers **do not "eat" messages**.
+    * Prior to 0.8, "offsets" were literal byte offsets into the log
+
 Multi-consumer
 ==============
+
+Even if Kafka's availability and scalability story isn't interesting to you,
+the **multi-consumer story should be**.
 
 .. image:: ./_static/multiconsumer.png
     :width: 60%
     :align: center
 
-Even if Kafka's availability and scalability story isn't interesting to you,
-the **multi-consumer story should be**.
+.. note::
+    * Since we only store the offset for a consumer group,
+      the overhead for new consumer groups is nil
 
 Queue problems, revisited
 =========================
@@ -515,6 +565,12 @@ Traditional queues (e.g. RabbitMQ / Redis):
 * more consumers mean more queue server load
 
 **Kafka solves all of these problems.**
+
+.. note::
+    * out of order acks are actually expensive
+
+        * random disk seek/writes aren't cheap!
+    * more consumers = duplicated messages
 
 Kafka in Python (1)
 ===================
@@ -557,31 +613,6 @@ Kafka in Python (2)
             urlref, url, ts = parse_msg(msg)
             yield urlref, url, ts
 
-Python + Clojure
-================
-
-Opportunity for **Python & Clojure** to work together.
-
-**Python**: core computations & DB persistence.
-
-**fabric**: deployment & remote server management.
-
-**Clojure**: interop with JVM infrastructure: Storm & Hadoop.
-
-**lein**: manage Java's classpath & packaging nightmare.
-
-Interested in Clojure? I have another talk, `Clojonic`_, that can
-teach you a little Clojure from a Python perspective!
-
-.. _Clojonic: http://pixelmonkey.org/pub/clojonic
-
-Python and JVM interop
-======================
-
-.. image:: ./_static/python_and_data.png
-    :width: 90%
-    :align: center
-
 Other Log-Centric Companies
 ===========================
 
@@ -596,19 +627,6 @@ Outbrain      Kafka     Storm
 LivePerson    Kafka     Storm
 Netflix       Kafka     ???
 ============= ========= ========
-
-Alternative Approaches
-======================
-
-============= ========= ==========
-Company       Logs      Workers
-============= ========= ==========
-Yahoo         S4        S4
-Amazon        Kinesis   ???
-Google        ???       Millwheel*
-Facebook      Scribe*   ???
-UC Berkeley   RDDs*     Spark*
-============= ========= ==========
 
 ==========
 Conclusion
@@ -681,5 +699,3 @@ Andrew & Keith:
             $(this).find("td:first").css("background-color", "#eee"); 
         });
         </script>
-
-
