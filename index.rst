@@ -438,6 +438,8 @@ As of 0.8, full replication of topic data.
 
 .. note::
     * Halfway between pub/sub and message passing
+    * Caches everything in memory it can, only going to disk
+      when necessary.
     * Our Stats:
 
       * 3 m1.medium instances w/1TB EBS
@@ -451,15 +453,17 @@ Kafka concepts
 =============== ==================================================================
 Concept         Description
 =============== ==================================================================
+Cluster         An arrangement of Brokers & Zookeeper nodes
+Broker          An individual node in the Cluster
 Topic           A group of related messages (a stream)
+Partition       Part of a topic, used for replication
 Producer        Publishes messages to stream
 Consumer Group  Group of related processes reading a topic
-Broker          An individual node in the Cluster
-Cluster         An arrangement of Brokers & Zookeeper nodes
 Offset          Point in a topic that the consumer has read to
 =============== ==================================================================
 
 .. note::
+    * Consumer groups balance partitions to read among themselves
     * Offsets make it like non-ephemeral pub-sub
 
 What's the catch?
@@ -495,6 +499,7 @@ Consumers can **share identical logs easily**.
 
 .. note::
     * Consumers **do not "eat" messages**.
+    * Consumers parallelize by reading separate partitions
     * Prior to 0.8, "offsets" were literal byte offsets into the log
 
 Multi-consumer
@@ -531,43 +536,48 @@ Traditional queues (e.g. RabbitMQ / Redis):
 Kafka in Python (1)
 ===================
 
+python-kafka (0.8+)
+    * https://github.com/mumrah/kafka-python
+
 .. sourcecode:: python
 
-    import logging
+    from kafka.client import KafkaClient
+    from kafka.consumer import SimpleConsumer
 
-    # generic Zookeeper library
-    from kazoo.client import KazooClient
-
-    # Parse.ly's open source Kafka client library
-    from samsa.cluster import Cluster
-
-    log = logging.getLogger('test_capture_pageviews')
-
-    def _connect_kafka():
-        zk = KazooClient()
-        zk.start()
-        cluster = Cluster(zk)
-        queue = cluster\
-                    .topics['pixel_data']\
-                    .subscribe('test_capture_pageviews')
-        return queue
+    kafka = KafkaClient('localhost:9092')
+    consumer = SimpleConsumer(kafka, 'test_consumer', 'raw_data')
+    start = time.time()
+    for msg in consumer:
+        count += 1
+        if count % 1000 == 0:
+            dur = time.time() - start
+            print 'Reading at {:.2f} messages/sec'.format(dur/1000)
+            start = time.time()
 
 Kafka in Python (2)
 ===================
 
+samsa (0.7x)
+    * https://github.com/getsamsa/samsa
+
 .. sourcecode:: python
 
-    def pageview_stream():
-        queue = _connect_kafka()
-        count = 0
-        for msg in queue:
-            count += 1
-            if count % 1000 == 0:
-                # in this example, offsets are committed to 
-                # Zookeeper every 1000 messages
-                queue.commit_offsets()
-            urlref, url, ts = parse_msg(msg)
-            yield urlref, url, ts
+    import time
+    from kazoo.client import KazooClient
+    from samsa.cluster import Cluster
+
+    zk = KazooClient()
+    zk.start()
+    cluster = Cluster(zk)
+    queue = cluster.topics['raw_data'].subscribe('test_consumer')
+    start = time.time()
+    for msg in queue:
+        count += 1
+        if count % 1000 == 0:
+            dur = time.time() - start
+            print 'Reading at {:.2f} messages/sec'.format(dur/1000)
+            start = time.time()
+            queue.commit_offsets() # commit to zk every 1k msgs
 
 Other Log-Centric Companies
 ===========================
