@@ -20,6 +20,21 @@ Agenda
 * Aggregating the stream (Storm)
 * Organizing around logs (Kafka)
 
+Admin
+=====
+
+Our presentations and code:
+
+http://parse.ly/code
+
+This presentation's slides:
+
+http://parse.ly/slides/logs
+
+This presentation's notes:
+
+http://parse.ly/slides/logs/notes
+
 =================
 What is Parse.ly?
 =================
@@ -367,8 +382,8 @@ Interested? Lightning talk!
 Organizing around logs
 ======================
 
-Not all logs are applicaton logs
-================================
+Not all logs are application logs
+=================================
 
 A "log" could be any stream of structured data:
 
