@@ -38,64 +38,53 @@ Web content analytics for digital storytellers.
     .. image:: ./_static/banner_04.png
         :align: center
 
-Core Value
-==========
+.. note::
 
-Gives web content teams a clear understanding about
-**what readers want** and how to deliver it to them
-in the most effective way.
+    Gives web content teams a clear understanding about
+    **what readers want** and how to deliver it to them
+    in the most effective way.
 
-Answers questions for journalists and editors, like:
+    Answers questions for journalists and editors, like:
 
-* What stories are **most popular in the last 4 hours**?
-* Which **authors drive the most Facebook traffic**?
-* What is the relationship between **sharing and reading**?
+    * What stories are **most popular in the last 4 hours**?
+    * Which **authors drive the most Facebook traffic**?
+    * What is the relationship between **sharing and reading**?
 
-For product teams, our API enables **dynamic content
-recommendations** which can be implemented in minutes.
-
-Variety of Data
-===============
-
-Audience data:
-    * visitors
-    * sessions
-
-Engagement data:
-    * page views
-    * time spent
-    * social shares
-
-Content data:
-    * headline
-    * keywords / topics
-    * author / section / tag
-
+    For product teams, our API enables **dynamic content
+    recommendations** which can be implemented in minutes.
 
 Velocity
 ========
 
-* average post has **<48-hour shelf life**
-* many posts get **most traffic in first few hours**
-* major news events can cause **bursty traffic**
+Average post has **<48-hour shelf life**.
 
 .. image:: ./_static/pulse.png
     :width: 60%
     :align: center
 
+.. note::
+
+    * many posts get **most traffic in first few hours**
+    * major news events can cause **bursty traffic**
+
+
 Volume
 ======
 
-* top publishers write **1000's of posts per day**
-* huge **long tail of posts** get traffic forever
-* Parse.ly tracks **8 billion page views per month**
-* ... from **over 250 million monthly unique browsers**
-
-Time series data
-================
+Top publishers write **1000's of posts per day**.
 
 .. image:: ./_static/sparklines_multiple.png
     :align: center
+
+
+.. note::
+
+    * huge **long tail of posts** get traffic forever
+    * Parse.ly tracks **8 billion page views per month**
+    * ... from **over 250 million monthly unique browsers**
+
+Time series data
+================
 
 .. image:: ./_static/sparklines_stacked.png
     :align: center
@@ -147,16 +136,15 @@ Queues and workers
 
 **Workers**: Cron Jobs => Celery
 
-Queue problems
-==============
+.. note::
 
-Traditional queues (e.g. RabbitMQ / Redis):
+    Traditional queues (e.g. RabbitMQ / Redis):
 
-* not distributed / highly available at core
-* not persistent ("overflows" easily)
-* more consumers mean more queue server load
+    * not distributed / highly available at core
+    * not persistent ("overflows" easily)
+    * more consumers mean more queue server load
 
-(Hint: Kafka solves these problems.)
+    (Hint: Kafka solves these problems.)
 
 Workers and databases
 =====================
@@ -165,15 +153,13 @@ Workers and databases
     :width: 80%
     :align: center
 
+.. note::
 
-Worker problems
-===============
-
-* no control for parallelism and load distribution
-* no guaranteed processing for multi-stage pipelines
-* no fault tolerance for individual stages
-* difficult to do local / beta / staging environments
-* dependencies between worker stages are unclear
+    * no control for parallelism and load distribution
+    * no guaranteed processing for multi-stage pipelines
+    * no fault tolerance for individual stages
+    * difficult to do local / beta / staging environments
+    * dependencies between worker stages are unclear
 
 Lots of moving parts
 ====================
@@ -181,7 +167,6 @@ Lots of moving parts
 .. image:: /_static/tech_stack.png
     :width: 90%
     :align: center
-
 
 To add more features...
 =======================
@@ -210,19 +195,6 @@ Storm provides a set of **general primitives** for doing **real-time computation
 
 Perfect as a replacement for ad-hoc workers-and-queues systems.
 
-Hadoop primitives
-=================
-
-**Durable** Data Set, typically from **S3**.
-
-**HDFS** used for inter-process communication.
-
-**Mappers** & **Reducers**; Pig's **JobFlow** is a **DAG**.
-
-**JobTracker** & **TaskTracker** manage execution.
-
-**Tuneable parallelism** + built-in **fault tolerance**.
-
 Storm primitives
 ================
 
@@ -235,6 +207,20 @@ Storm primitives
 **Nimbus** & **Workers** manage execution.
 
 **Tuneable parallelism** + built-in **fault tolerance**.
+
+.. note::
+
+    Hadoop Parallel:
+
+    **Durable** Data Set, typically from **S3**.
+
+    **HDFS** used for inter-process communication.
+
+    **Mappers** & **Reducers**; Pig's **JobFlow** is a **DAG**.
+
+    **JobTracker** & **TaskTracker** manage execution.
+
+    **Tuneable parallelism** + built-in **fault tolerance**.
 
 Storm features
 ==============
@@ -373,46 +359,16 @@ Running and debugging
 
 You can then run the local Storm topology using::
 
-    sparse run
-
-e.g. for wordcount example::
-
+    $ sparse run
     Running wordcount topology...
     Options: {:spec "topologies/wordcount.clj", ...}
     #<StormTopology StormTopology(spouts:{word-spout=...
-    ... lots of output ...
     storm.daemon.nimbus - Starting Nimbus with conf {...
-    storm.daemon.nimbus - Using default scheduler
-    storm.daemon.supervisor - Starting Supervisor with conf {...
     storm.daemon.supervisor - Starting supervisor with id 4960ac74...
     storm.daemon.nimbus - Received topology submission with conf {...
-    ... lots of output ...
+    ... lots of output as topology runs...
 
-Packaging and submitting
-========================
-
-To package your toplogy for a Storm cluster, use::
-
-    sparse package topologies/wordcount.clj
-
-To submit your Storm topology locally, use::
-
-    sparse submit topologies/wordcount.clj
-
-To submit your Storm topology to a remotely-running production Storm cluster, use::
-
-    sparse submit topologies/wordcount.clj --env=prod
-
-Monitoring
-==========
-
-To monitor a running Storm topology in production, use::
-
-    sparse monitor --env=prod
-
-To tail all the log files for a running topology::
-
-    sparse tail --env=prod
+Interested? Lightning talk!
 
 ======================
 Organizing around logs
