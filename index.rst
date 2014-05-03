@@ -641,7 +641,6 @@ Go forth and stream!
 
 Parse.ly:
 
-* http://parse.ly
 * http://parse.ly/code
 * http://twitter.com/parsely
 
@@ -688,7 +687,7 @@ Andrew & Keith:
     .. raw:: html
 
         <script>
-        $("tr").each(function() { 
-            $(this).find("td:first").css("background-color", "#eee"); 
+        $("tr").each(function() {
+            $(this).find("td:first").css("background-color", "#eee");
         });
         </script>
