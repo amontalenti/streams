@@ -118,13 +118,6 @@ Information radiators
 Architecture evolution
 ======================
 
-Stack Overview
-==============
-
-.. image:: ./_static/oss_logos.png
-    :width: 90%
-    :align: center
-
 Queues and workers
 ==================
 
@@ -168,14 +161,14 @@ Lots of moving parts
     :width: 90%
     :align: center
 
-To add more features...
-=======================
 
-... we had to add more workers and queues!
+.. note::
 
-Got harder and harder to develop on "the entire stack".
+    To add more features, we had to add more workers and queues!
 
-More code devoted to ops, rather than business logic.
+    Got harder and harder to develop on "the entire stack".
+
+    More code devoted to ops, rather than business logic.
 
 In short: it started to get messy
 =================================
