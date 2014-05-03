@@ -48,7 +48,7 @@ def main():
     flask_wsgi_app = app.wsgi_app
     server = make_livereload_server(flask_wsgi_app)
     # serve application
-    server.serve()
+    server.serve(host='0.0.0.0')
 
 if __name__ == "__main__":
     main()
