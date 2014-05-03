@@ -652,21 +652,19 @@ Andrew & Keith:
 
 .. raw:: html
 
-    <script type="text/javascript">//<![CDATA[
-    // Google Analytics
+    <script type="text/javascript">
     var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-19296962-1']);
-    _gaq.push(['_setCustomVar',3,'year','2014',3],['_setCustomVar',4,'categories','computer-science open-source programming startups tech',3],['_trackPageview']);
-    (function () {
-        var ga = document.createElement('script');
-        ga.type = 'text/javascript';
-        ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    _gaq.push(['_setAccount', 'UA-5989141-8']);
+    _gaq.push(['_setDomainName', '.parsely.com']);
+    _gaq.push(['_trackPageview']);
 
-        var s = document.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(ga, s);
+    (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        //ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
     })();
-    //]]></script>
+    </script>
 
 .. ifnotslides::
 
