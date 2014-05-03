@@ -1,5 +1,5 @@
 ========================
-Real-time Streams & Logs 
+Real-time Streams & Logs
 ========================
 
 Andrew Montalenti, CTO
@@ -41,8 +41,8 @@ Web content analytics for digital storytellers.
 Core Value
 ==========
 
-Gives web content teams a clear understanding about 
-**what readers want** and how to deliver it to them 
+Gives web content teams a clear understanding about
+**what readers want** and how to deliver it to them
 in the most effective way.
 
 Answers questions for journalists and editors, like:
@@ -156,7 +156,24 @@ Traditional queues (e.g. RabbitMQ / Redis):
 * not persistent ("overflows" easily)
 * more consumers mean more queue server load
 
-(Hint: ZeroMQ trades these problems for another: unreliability.)
+(Hint: Kafka solves these problems.)
+
+Workers and databases
+=====================
+
+.. image:: ./_static/queue_storage.png
+    :width: 80%
+    :align: center
+
+
+Worker problems
+===============
+
+* no control for parallelism and load distribution
+* no guaranteed processing for multi-stage pipelines
+* no fault tolerance for individual stages
+* difficult to do local / beta / staging environments
+* dependencies between worker stages are unclear
 
 Lots of moving parts
 ====================
@@ -175,25 +192,6 @@ Got harder and harder to develop on "the entire stack".
 
 More code devoted to ops, rather than business logic.
 
-Workers and databases
-=====================
-
-Different workers-and-queues would talk to different databases.
-
-.. image:: ./_static/queue_storage.png
-    :width: 80%
-    :align: center
-
-
-Worker problems
-===============
-
-* no control for parallelism and load distribution
-* no guaranteed processing for multi-stage pipelines
-* no fault tolerance for individual stages
-* difficult to do local / beta / staging environments
-* dependencies between worker stages are unclear
-
 In short: it started to get messy
 =================================
 
@@ -209,6 +207,8 @@ Storm is a **distributed real-time computation system**.
 Hadoop provides a set of general primitives for doing batch processing.
 
 Storm provides a set of **general primitives** for doing **real-time computation**.
+
+Perfect as a replacement for ad-hoc workers-and-queues systems.
 
 Hadoop primitives
 =================
@@ -239,16 +239,12 @@ Storm primitives
 Storm features
 ==============
 
-=============== ====================================================================
-Feature         Description
-=============== ====================================================================
-Speed           1,000,000 tuples per second per node, using Kyro and ZeroMQ
-Fault Tolerance Workers and Storm management daemons self-heal in face of failure
-Parallelism     Tasks run on cluster w/ tuneable parallelism
-Guaranteed Msgs Tracks lineage of data tuples, providing an at-least-once guarantee
-Easy Code Mgmt  Several versions of code in a cluster; multiple languages supported
-Local Dev       Entire system can run in "local mode" for end-to-end testing
-=============== ====================================================================
+* Speed
+* Fault tolerance
+* Parallelism
+* Guaranteed Messages
+* Easy Code Management
+* Local Dev
 
 Storm core concepts
 ===================
@@ -267,26 +263,6 @@ Wired Topology
 ==============
 
 .. image:: ./_static/topology.png
-    :width: 80%
-    :align: center
-
-
-Storm cluster concepts
-======================
-
-=============== =======================================================================
-Concept         Description
-=============== =======================================================================
-Tasks           The process/thread corresponding to a running Bolt/Spout in a cluster
-Workers         The JVM process managing work for a given physical node in the cluster
-Supervisor      The process monitoring the Worker processes on a single machine
-Nimbus          Coordinates work among Workers/Supervisors; maintains cluster stats
-=============== =======================================================================
-
-Running Cluster
-===============
-
-.. image:: ./_static/cluster.png
     :width: 80%
     :align: center
 
@@ -376,28 +352,6 @@ Word Count Bolt in Python
             storm.log('%s: %d' % (word, self.counts[word]))
 
     WordCounter().run()
- 
-Running a local cluster (Clojure, sorry!)
-=========================================
-
-.. sourcecode:: clojure
-
-    (defn run-local! []
-        (let [cluster (LocalCluster.)]
-            ;; submit the topology configured above
-            (.submitTopology cluster 
-                            ;; topology name
-                            "wordcount-topology"
-                            ;; topology settings
-                            {TOPOLOGY-DEBUG true} 
-                            ;; topology configuration
-                            (mk-wordcount-topology))
-            ;; sleep for 5 seconds before...
-            (Thread/sleep 5000)
-            ;; shutting down the cluster
-            (.shutdown cluster)
-        ) 
-    )
 
 streamparse
 ===========
