@@ -385,9 +385,11 @@ A "log" could be any stream of structured data:
 * Partially processed data
 * Database operations (e.g. mongo's oplog)
 
+A series of timestamped facts about a given system
+
 .. note::
     * Not what's going into logstash
-    * Log as a basic primitive for passing structured data around
+    * Redefining "log" and set up what we mean by "log-centric"
 
 LinkedIn's lattice problem
 ==========================
@@ -418,10 +420,10 @@ Parse.ly is log-centric, too
     :align: center
 
 .. note::
-    * Kafka is a unified data store for intermediate data steps
+    * Our databases are ultimately views to the raw logs
+    * We use "logs" in more places than just that now
     * Used to "fan out" data to consuming services
     * Makes adding new services trivial
-    * 10:1 generated to execute ratio for mongo ops
 
 Introducing Apache Kafka
 ========================
@@ -499,7 +501,6 @@ Consumers can **share identical logs easily**.
 
 .. note::
     * Consumers **do not "eat" messages**.
-    * Consumers parallelize by reading separate partitions
     * Prior to 0.8, "offsets" were literal byte offsets into the log
 
 Multi-consumer
@@ -532,6 +533,26 @@ Traditional queues (e.g. RabbitMQ / Redis):
 
         * random disk seek/writes aren't cheap!
     * more consumers = duplicated messages
+
+Kafka + Storm
+=============
+
+Good fit for at-least-once processing
+
+Great fit for Trident's batching
+
+    * No need to out of order acks in either case
+
+Able to keep up with Storm's high-throughput processing
+
+Great for handling backpressure during traffic spikes
+
+.. note::
+    * Be sure to explain Trident and/or at-least-once
+    * Handles backpressure by providing buffers between major
+      processing steps
+    * Doing news analytics, the traffic is bursty. Strategic messaging
+      use gives us insurance against huge events taking down our systems
 
 Kafka in Python (1)
 ===================
@@ -602,7 +623,6 @@ What we've learned
 ==================
 
 * There is no **silver bullet** data processing technology.
-* Especially for data problems with "the three V's".
 * Log storage is very cheap, and getting cheaper.
 * "Timestamped facts" is rawest form of data available.
 * Storm and Kafka allow you to develop atop those facts.
