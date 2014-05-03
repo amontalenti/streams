@@ -16,7 +16,6 @@ Agenda
 ======
 
 * Parse.ly problem space
-* Architecture evolution
 * Aggregating the stream (Storm)
 * Organizing around logs (Kafka)
 
@@ -203,6 +202,16 @@ Storm provides a set of **general primitives** for doing **real-time computation
 
 Perfect as a replacement for ad-hoc workers-and-queues systems.
 
+Storm features
+==============
+
+* Speed
+* Fault tolerance
+* Parallelism
+* Guaranteed Messages
+* Easy Code Management
+* Local Dev
+
 Storm primitives
 ================
 
@@ -230,35 +239,25 @@ Storm primitives
 
     **Tuneable parallelism** + built-in **fault tolerance**.
 
-Storm features
-==============
-
-* Speed
-* Fault tolerance
-* Parallelism
-* Guaranteed Messages
-* Easy Code Management
-* Local Dev
-
-Storm core concepts
-===================
-
-=============== =======================================================================
-Concept         Description
-=============== =======================================================================
-Stream          Unbounded sequence of data tuples with named fields
-Spout           A source of a Stream of tuples; typically reading from Kafka
-Bolt            Computation steps that consume Streams and emits new Streams
-Grouping        Way of partitioning data fed to a Bolt; for example: by field, shuffle
-Topology        Directed Acyclic Graph (DAG) describing Spouts, Bolts, & Groupings
-=============== =======================================================================
-
 Wired Topology
 ==============
 
 .. image:: ./_static/topology.png
     :width: 80%
     :align: center
+
+.. note::
+
+    =============== =======================================================================
+    Concept         Description
+    =============== =======================================================================
+    Stream          Unbounded sequence of data tuples with named fields
+    Spout           A source of a Stream of tuples; typically reading from Kafka
+    Bolt            Computation steps that consume Streams and emits new Streams
+    Grouping        Way of partitioning data fed to a Bolt; for example: by field, shuffle
+    Topology        Directed Acyclic Graph (DAG) describing Spouts, Bolts, & Groupings
+    =============== =======================================================================
+
 
 Tuple Tree
 ==========
@@ -299,7 +298,7 @@ Word Stream Spout in Python
             self.words = itertools.cycle(['dog', 'cat',
                                           'zebra', 'elephant'])
 
-        def nextTuple(self):
+        def next_tuple(self):
             word = next(self.words)
             storm.emit([word])
 
@@ -441,7 +440,7 @@ Designed for throughput; efficient resource use.
 
     * Persists to disk; in-memory for recent data
     * Little to no overhead for new consumers
-    * Scalable to 1000's of messages per second
+    * Scalable to 10,000's of messages per second
 
 As of 0.8, full replication of topic data.
 
@@ -546,13 +545,13 @@ Kafka + Storm
 
 Good fit for at-least-once processing.
 
-Great fit for Trident's batching.
-
 No need for out-of-order acks in either case.
 
 Able to keep up with Storm's high-throughput processing.
 
 Great for handling backpressure during traffic spikes.
+
+Community work is ongoing for at-most-once processing.
 
 .. note::
     * Be sure to explain Trident and/or at-least-once
