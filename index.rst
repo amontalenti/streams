@@ -385,9 +385,11 @@ A "log" could be any stream of structured data:
 * Partially processed data
 * Database operations (e.g. mongo's oplog)
 
+A series of timestamped facts about a given system
+
 .. note::
     * Not what's going into logstash
-    * Log as a basic primitive for passing structured data around
+    * Redefining "log" and set up what we mean by "log-centric"
 
 LinkedIn's lattice problem
 ==========================
@@ -418,10 +420,10 @@ Parse.ly is log-centric, too
     :align: center
 
 .. note::
-    * Kafka is a unified data store for intermediate data steps
+    * Our databases are ultimately views to the raw logs
+    * We use "logs" in more places than just that now
     * Used to "fan out" data to consuming services
     * Makes adding new services trivial
-    * 10:1 generated to execute ratio for mongo ops
 
 Introducing Apache Kafka
 ========================
@@ -438,6 +440,8 @@ As of 0.8, full replication of topic data.
 
 .. note::
     * Halfway between pub/sub and message passing
+    * Caches everything in memory it can, only going to disk
+      when necessary.
     * Our Stats:
 
       * 3 m1.medium instances w/1TB EBS
@@ -451,15 +455,17 @@ Kafka concepts
 =============== ==================================================================
 Concept         Description
 =============== ==================================================================
+Cluster         An arrangement of Brokers & Zookeeper nodes
+Broker          An individual node in the Cluster
 Topic           A group of related messages (a stream)
+Partition       Part of a topic, used for replication
 Producer        Publishes messages to stream
 Consumer Group  Group of related processes reading a topic
-Broker          An individual node in the Cluster
-Cluster         An arrangement of Brokers & Zookeeper nodes
 Offset          Point in a topic that the consumer has read to
 =============== ==================================================================
 
 .. note::
+    * Consumer groups balance partitions to read among themselves
     * Offsets make it like non-ephemeral pub-sub
 
 What's the catch?
@@ -528,46 +534,70 @@ Traditional queues (e.g. RabbitMQ / Redis):
         * random disk seek/writes aren't cheap!
     * more consumers = duplicated messages
 
+Kafka + Storm
+=============
+
+Good fit for at-least-once processing
+
+Great fit for Trident's batching
+
+    * No need to out of order acks in either case
+
+Able to keep up with Storm's high-throughput processing
+
+Great for handling backpressure during traffic spikes
+
+.. note::
+    * Be sure to explain Trident and/or at-least-once
+    * Handles backpressure by providing buffers between major
+      processing steps
+    * Doing news analytics, the traffic is bursty. Strategic messaging
+      use gives us insurance against huge events taking down our systems
+
 Kafka in Python (1)
 ===================
 
+python-kafka (0.8+)
+    * https://github.com/mumrah/kafka-python
+
 .. sourcecode:: python
 
-    import logging
+    from kafka.client import KafkaClient
+    from kafka.consumer import SimpleConsumer
 
-    # generic Zookeeper library
-    from kazoo.client import KazooClient
-
-    # Parse.ly's open source Kafka client library
-    from samsa.cluster import Cluster
-
-    log = logging.getLogger('test_capture_pageviews')
-
-    def _connect_kafka():
-        zk = KazooClient()
-        zk.start()
-        cluster = Cluster(zk)
-        queue = cluster\
-                    .topics['pixel_data']\
-                    .subscribe('test_capture_pageviews')
-        return queue
+    kafka = KafkaClient('localhost:9092')
+    consumer = SimpleConsumer(kafka, 'test_consumer', 'raw_data')
+    start = time.time()
+    for msg in consumer:
+        count += 1
+        if count % 1000 == 0:
+            dur = time.time() - start
+            print 'Reading at {:.2f} messages/sec'.format(dur/1000)
+            start = time.time()
 
 Kafka in Python (2)
 ===================
 
+samsa (0.7x)
+    * https://github.com/getsamsa/samsa
+
 .. sourcecode:: python
 
-    def pageview_stream():
-        queue = _connect_kafka()
-        count = 0
-        for msg in queue:
-            count += 1
-            if count % 1000 == 0:
-                # in this example, offsets are committed to 
-                # Zookeeper every 1000 messages
-                queue.commit_offsets()
-            urlref, url, ts = parse_msg(msg)
-            yield urlref, url, ts
+    import time
+    from kazoo.client import KazooClient
+    from samsa.cluster import Cluster
+
+    zk = KazooClient()
+    zk.start()
+    cluster = Cluster(zk)
+    queue = cluster.topics['raw_data'].subscribe('test_consumer')
+    start = time.time()
+    for msg in queue:
+        count += 1
+        if count % 1000 == 0:
+            dur = time.time() - start
+            print 'Reading at {:.2f} messages/sec'.format(dur/1000)
+            queue.commit_offsets() # commit to zk every 1k msgs
 
 Other Log-Centric Companies
 ===========================
@@ -592,7 +622,6 @@ What we've learned
 ==================
 
 * There is no **silver bullet** data processing technology.
-* Especially for data problems with "the three V's".
 * Log storage is very cheap, and getting cheaper.
 * "Timestamped facts" is rawest form of data available.
 * Storm and Kafka allow you to develop atop those facts.
