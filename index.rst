@@ -597,7 +597,6 @@ samsa (0.7x)
         if count % 1000 == 0:
             dur = time.time() - start
             print 'Reading at {:.2f} messages/sec'.format(dur/1000)
-            start = time.time()
             queue.commit_offsets() # commit to zk every 1k msgs
 
 Other Log-Centric Companies
