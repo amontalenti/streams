@@ -436,13 +436,13 @@ Parse.ly is log-centric, too
 Introducing Apache Kafka
 ========================
 
-Log centric message passing system developed at LinkedIn.
+Log-centric messaging system developed at LinkedIn.
 
-Designed for throughput and extremely efficient resource use.
+Designed for throughput; efficient resource use.
 
-    * Persists to disk, but in-memory serving of recent data
-    * Little to no overhead for addition consumers
-    * Scalable to tens of thousands of messages per second
+    * Persists to disk; in-memory serving of recent data
+    * Little to no overhead for new consumers
+    * Scalable to 1000's of messages per second
 
 As of 0.8, full replication of topic data.
 
@@ -481,12 +481,12 @@ What's the catch?
 
 Replication isn't perfect. Network partitions can cause problems.
 
-No out of order acknowldegement
+No out of order acknowledgement:
 
-    * "Offset" is a marker of where the consumer is in a log, nothing more
+    * "Offset" is a marker of where consumer is in log; nothing more.
     * On a restart, you know where to start reading, but not if individual
-      messages before the stored offset were fully processed.
-    * In practice, this isn't as much of a problem as it sounds.
+      messages before the stored offset was fully processed.
+    * In practice, not as much of a problem as it sounds.
 
 .. note::
     * Not as much of a problem if you batch and update offset once batch
@@ -545,15 +545,15 @@ Traditional queues (e.g. RabbitMQ / Redis):
 Kafka + Storm
 =============
 
-Good fit for at-least-once processing
+Good fit for at-least-once processing.
 
-Great fit for Trident's batching
+Great fit for Trident's batching.
 
-    * No need to out of order acks in either case
+No need for out-of-order acks in either case.
 
-Able to keep up with Storm's high-throughput processing
+Able to keep up with Storm's high-throughput processing.
 
-Great for handling backpressure during traffic spikes
+Great for handling backpressure during traffic spikes.
 
 .. note::
     * Be sure to explain Trident and/or at-least-once
