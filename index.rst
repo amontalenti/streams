@@ -387,13 +387,12 @@ Not all logs are application logs
 
 A "log" could be any stream of structured data:
 
-
 * Web logs
 * Raw data waiting to be processed
 * Partially processed data
 * Database operations (e.g. mongo's oplog)
 
-A series of timestamped facts about a given system
+A series of timestamped facts about a given system.
 
 .. note::
     * Not what's going into logstash
@@ -440,7 +439,7 @@ Log-centric messaging system developed at LinkedIn.
 
 Designed for throughput; efficient resource use.
 
-    * Persists to disk; in-memory serving of recent data
+    * Persists to disk; in-memory for recent data
     * Little to no overhead for new consumers
     * Scalable to 1000's of messages per second
 
@@ -481,7 +480,7 @@ What's the catch?
 
 Replication isn't perfect. Network partitions can cause problems.
 
-No out of order acknowledgement:
+No out-of-order acknowledgement:
 
     * "Offset" is a marker of where consumer is in log; nothing more.
     * On a restart, you know where to start reading, but not if individual
@@ -643,6 +642,7 @@ Go forth and stream!
 Parse.ly:
 
 * http://parse.ly
+* http://parse.ly/code
 * http://twitter.com/parsely
 
 Andrew & Keith:
