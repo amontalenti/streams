@@ -545,13 +545,13 @@ Kafka + Storm
 
 Good fit for at-least-once processing.
 
-No need for out-of-order acks in either case.
+No need for out-of-order acks.
+
+Community work is ongoing for at-most-once processing.
 
 Able to keep up with Storm's high-throughput processing.
 
 Great for handling backpressure during traffic spikes.
-
-Community work is ongoing for at-most-once processing.
 
 .. note::
     * Be sure to explain Trident and/or at-least-once
