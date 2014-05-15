@@ -613,6 +613,7 @@ Company       Logs      Workers
 ============= ========= ========
 LinkedIn      Kafka*    Samza
 Twitter       Kafka     Storm*
+Pinterest     Kafka     Storm
 Spotify       Kafka     Storm
 Wikipedia     Kafka     Storm
 Outbrain      Kafka     Storm
