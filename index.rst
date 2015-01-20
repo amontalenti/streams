@@ -456,19 +456,19 @@ config.json
         "topology_specs": "topologies/",
         "envs": {
             "0.8": {
-                "user": "cogtree",
-                "nimbus": "ue1a-storm-head.cogtree.com:6627",
-                "workers": ["ue1a-storm1.cogtree.com",
-                            "ue1a-storm2.cogtree.com"],
-                "log_path": "/var/log/cogtree/storm",
+                "user": "ubuntu",
+                "nimbus": "storm-head.ec2-ubuntu.com",
+                "workers": ["storm1.ec2-ubuntu.com",
+                            "storm2.ec2-ubuntu.com"],
+                "log_path": "/var/log/ubuntu/storm",
                 "virtualenv_root": "/data/virtualenvs"
             },
             "vagrant": {
-                "user": "cogtree",
-                "nimbus": "vagrant:6627",
-                "workers": ["vagrant"],
-                "log_path": "/home/cogtree/storm/logs",
-                "virtualenv_root": "/home/cogtree/virtualenvs"
+                "user": "ubuntu",
+                "nimbus": "vagrant.local",
+                "workers": ["vagrant.local"],
+                "log_path": "/home/ubuntu/storm/logs",
+                "virtualenv_root": "/home/ubuntu/virtualenvs"
             }
         }
     }
