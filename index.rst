@@ -1,10 +1,10 @@
-========================
-Real-time Streams & Logs
-========================
+==============
+Python ♥ Storm
+==============
 
-Andrew Montalenti, CTO
+A Pythonista in Stormland.
 
-Keith Bourgoin, Backend Lead
+by Andrew Montalenti, CTO
 
 .. rst-class:: logo
 
@@ -16,8 +16,10 @@ Agenda
 ======
 
 * Parse.ly problem space
-* Aggregating the stream (Storm)
-* Organizing around logs (Kafka)
+* Why Storm for Python?
+* Why `streamparse`?
+* Other frameworks
+* Python on Storm examples
 
 Admin
 =====
@@ -28,11 +30,11 @@ http://parse.ly/code
 
 This presentation's slides:
 
-http://parse.ly/slides/logs
+http://parse.ly/slides/streamparse
 
 This presentation's notes:
 
-http://parse.ly/slides/logs/notes
+http://parse.ly/slides/streamparse
 
 =================
 What is Parse.ly?
@@ -132,44 +134,8 @@ Information radiators
 Architecture evolution
 ======================
 
-Queues and workers
-==================
-
-.. image:: /_static/queues_and_workers.png
-    :width: 90%
-    :align: center
-
-**Queues**: RabbitMQ => Redis => ZeroMQ
-
-**Workers**: Cron Jobs => Celery
-
-.. note::
-
-    Traditional queues (e.g. RabbitMQ / Redis):
-
-    * not distributed / highly available at core
-    * not persistent ("overflows" easily)
-    * more consumers mean more queue server load
-
-    (Hint: Kafka solves these problems.)
-
-Workers and databases
-=====================
-
-.. image:: ./_static/queue_storage.png
-    :width: 80%
-    :align: center
-
-.. note::
-
-    * no control for parallelism and load distribution
-    * no guaranteed processing for multi-stage pipelines
-    * no fault tolerance for individual stages
-    * difficult to do local / beta / staging environments
-    * dependencies between worker stages are unclear
-
-Lots of moving parts
-====================
+Parse.ly Architecture, 2012
+===========================
 
 .. image:: /_static/tech_stack.png
     :width: 90%
@@ -184,102 +150,67 @@ Lots of moving parts
 
     More code devoted to ops, rather than business logic.
 
-In short: it started to get messy
-=================================
+It started to get messy
+=======================
 
 .. image:: ./_static/monitors.jpg
+    :width: 90%
+    :align: center
+
+Parse.ly Data Sources
+=====================
+
+.. image:: ./_static/parsely_data_sources.png
+    :width: 70%
+    :align: center
+
+Parse.ly Architecture, 2014
+===========================
+
+.. image:: ./_static/parsely_log_arch.png
     :width: 90%
     :align: center
 
 Introducing Storm
 =================
 
-Storm is a **distributed real-time computation system**.
+We read:
 
-Hadoop provides a set of general primitives for doing batch processing.
+"Storm is a **distributed real-time computation system**."
 
-Storm provides a set of **general primitives** for doing **real-time computation**.
+"Great," we thought. "But, what about Python support?"
 
-Perfect as a replacement for ad-hoc workers-and-queues systems.
+Hmm...
 
-Storm features
-==============
+storm.py
+========
 
-* Speed
-* Fault tolerance
-* Parallelism
-* Guaranteed Messages
-* Easy Code Management
-* Local Dev
-
-Storm primitives
-================
-
-**Streaming** Data Set, typically from **Kafka**.
-
-**ZeroMQ** used for inter-process communication.
-
-**Bolts** & **Spouts**; Storm's **Topology** is a **DAG**.
-
-**Nimbus** & **Workers** manage execution.
-
-**Tuneable parallelism** + built-in **fault tolerance**.
-
-.. note::
-
-    Hadoop Parallel:
-
-    **Durable** Data Set, typically from **S3**.
-
-    **HDFS** used for inter-process communication.
-
-    **Mappers** & **Reducers**; Pig's **JobFlow** is a **DAG**.
-
-    **JobTracker** & **TaskTracker** manage execution.
-
-    **Tuneable parallelism** + built-in **fault tolerance**.
-
-Wired Topology
-==============
-
-.. image:: ./_static/topology.png
-    :width: 80%
+.. image:: _static/streamparse_comp.png
     :align: center
+    :width: 80%
 
-.. note::
-
-    =============== =======================================================================
-    Concept         Description
-    =============== =======================================================================
-    Stream          Unbounded sequence of data tuples with named fields
-    Spout           A source of a Stream of tuples; typically reading from Kafka
-    Bolt            Computation steps that consume Streams and emits new Streams
-    Grouping        Way of partitioning data fed to a Bolt; for example: by field, shuffle
-    Topology        Directed Acyclic Graph (DAG) describing Spouts, Bolts, & Groupings
-    =============== =======================================================================
-
-
-Tuple Tree
+Petrel (1)
 ==========
 
-Tuple tree, anchoring, and retries.
+- First serious effort to make Storm Pythonic.
+- Open source by AirSage around ~2012.
+- No commits in last 10 months.
+- Maintainer no longer using Storm.
 
-.. image:: ./_static/wordcount.png
-    :width: 70%
-    :align: center
+Petrel Design
+=============
+
+- ...
 
 Word Stream Spout (Storm)
 =========================
 
 .. sourcecode:: clojure
 
-    ;; spout configuration
-    {"word-spout" (shell-spout-spec
-          ;; Python Spout implementation:
-          ;; - fetches words (e.g. from Kafka)
-            ["python" "words.py"]
-          ;; - emits (word,) tuples
-            ["word"]
+    {"word-spout" (python-spout-spec
+          options
+          "spouts.words.WordSpout"
+          ["word"]
           )
     }
 
@@ -290,9 +221,9 @@ Word Stream Spout in Python
 
     import itertools
 
-    from streamparse import storm
+    from streamparse.spout import Spout
 
-    class WordSpout(storm.Spout):
+    class WordSpout(Spout):
 
         def initialize(self, conf, ctx):
             self.words = itertools.cycle(['dog', 'cat',
@@ -300,26 +231,18 @@ Word Stream Spout in Python
 
         def next_tuple(self):
             word = next(self.words)
-            storm.emit([word])
-
-    WordSpout().run()
+            self.emit([word])
 
 Word Count Bolt (Storm)
 =======================
 
 .. sourcecode:: clojure
 
-    ;; bolt configuration
-    {"count-bolt" (shell-bolt-spec
-           ;; Bolt input: Spout and field grouping on word
-             {"word-spout" ["word"]}
-           ;; Python Bolt implementation:
-           ;; - maintains a Counter of word
-           ;; - increments as new words arrive
-             ["python" "wordcount.py"]
-           ;; Emits latest word count for most recent word
+    {"count-bolt" (python-bolt-spec
+            options
+            {"word-spout" :shuffle}
+            "bolts.wordcount.WordCount
              ["word" "count"]
-           ;; parallelism = 2
              :p 2
            )
     }
@@ -331,9 +254,9 @@ Word Count Bolt in Python
 
     from collections import Counter
 
-    from streamparse import storm
+    from streamparse.bolt import Bolt
 
-    class WordCounter(storm.Bolt):
+    class WordCounter(Bolt):
 
         def initialize(self, conf, ctx):
             self.counts = Counter()
@@ -341,17 +264,15 @@ Word Count Bolt in Python
         def process(self, tup):
             word = tup.values[0]
             self.counts[word] += 1
-            storm.emit([word, self.counts[word]])
-            storm.log('%s: %d' % (word, self.counts[word]))
-
-    WordCounter().run()
+            self.emit([word, self.counts[word]])
+            self.log('%s: %d' % (word, self.counts[word]))
 
 streamparse
 ===========
 
 ``sparse`` provides a CLI front-end to ``streamparse``, a framework for
 creating Python projects for running, debugging, and submitting Storm
-topologies for data processing. (*still in development*)
+topologies for data processing.
 
 After installing the ``lein`` (only dependency), you can run::
 
@@ -375,170 +296,55 @@ You can then run the local Storm topology using::
     storm.daemon.nimbus - Received topology submission with conf {...
     ... lots of output as topology runs...
 
-Interested? Lightning talk!
+======================
+A New Parse.ly Backend
+======================
+
+Reference Architecture
+======================
+
+.. image:: ./_static/parsely_ref_arch.png
+    :width: 90%
+    :align: center
+
+Complete F/OSS Stack
+====================
+
+.. image:: ./_static/parsely_oss.png
+    :width: 90%
+    :align: center
+
+A vision for new metrics
+========================
+
+.. image:: _static/parsely_icons.png
+    :width: 50%
+    :align: center
+
+More scale
+==========
+
+.. image:: _static/parsely_scale.png
+    :width: 50%
+    :align: center
 
 ======================
 Organizing around logs
 ======================
 
-Not all logs are application logs
-=================================
-
-A "log" could be any stream of structured data:
-
-* Web logs
-* Raw data waiting to be processed
-* Partially processed data
-* Database operations (e.g. mongo's oplog)
-
-A series of timestamped facts about a given system.
-
-.. note::
-    * Not what's going into logstash
-    * Redefining "log" and set up what we mean by "log-centric"
-
-LinkedIn's lattice problem
-==========================
-
-.. image:: ./_static/lattice.png
-    :width: 100%
-    :align: center
-
-Enter the unified log
-=====================
-
-.. image:: ./_static/unified_log.png
-    :width: 100%
-    :align: center
-
-Log-centric is simpler
-======================
-
-.. image:: ./_static/log_centric.png
-    :width: 65%
-    :align: center
-
-Parse.ly is log-centric, too
-============================
-
-.. image:: ./_static/parsely_log_arch.png
-    :width: 80%
-    :align: center
-
-.. note::
-    * Our databases are ultimately views to the raw logs
-    * We use "logs" in more places than just that now
-    * Used to "fan out" data to consuming services
-    * Makes adding new services trivial
-
-Introducing Apache Kafka
+Kafka and Multi-consumer
 ========================
-
-Log-centric messaging system developed at LinkedIn.
-
-Designed for throughput; efficient resource use.
-
-    * Persists to disk; in-memory for recent data
-    * Little to no overhead for new consumers
-    * Scalable to 10,000's of messages per second
-
-As of 0.8, full replication of topic data.
-
-.. note::
-    * Halfway between pub/sub and message passing
-    * Caches everything in memory it can, only going to disk
-      when necessary.
-    * Our Stats:
-
-      * 3 m1.medium instances w/1TB EBS
-      * 1 core / 2.75G memory
-      * 6k in / 16k out
-      * 75mbps in / 180mbps out
-
-Kafka concepts
-==============
-
-=============== ==================================================================
-Concept         Description
-=============== ==================================================================
-Cluster         An arrangement of Brokers & Zookeeper nodes
-Broker          An individual node in the Cluster
-Topic           A group of related messages (a stream)
-Partition       Part of a topic, used for replication
-Producer        Publishes messages to stream
-Consumer Group  Group of related processes reading a topic
-Offset          Point in a topic that the consumer has read to
-=============== ==================================================================
-
-.. note::
-    * Consumer groups balance partitions to read among themselves
-    * Offsets make it like non-ephemeral pub-sub
-
-What's the catch?
-=================
-
-Replication isn't perfect. Network partitions can cause problems.
-
-No out-of-order acknowledgement:
-
-    * "Offset" is a marker of where consumer is in log; nothing more.
-    * On a restart, you know where to start reading, but not if individual
-      messages before the stored offset was fully processed.
-    * In practice, not as much of a problem as it sounds.
-
-.. note::
-    * Not as much of a problem if you batch and update offset once batch
-      is done
-    * Just takes some occasionally clever ways of handling messages
-
-
-Kafka is a "distributed log"
-============================
-
-Topics are **logs**, not queues.
-
-Consumers **read into offsets of the log**.
-
-Logs are **maintained for a configurable period of time**.
-
-Messages can be **"replayed"**.
-
-Consumers can **share identical logs easily**.
-
-.. note::
-    * Consumers **do not "eat" messages**.
-    * Prior to 0.8, "offsets" were literal byte offsets into the log
-
-Multi-consumer
-==============
 
 Even if Kafka's availability and scalability story isn't interesting to you,
 the **multi-consumer story should be**.
 
+Unfortunately, `kafka-python` does not support multi-consumer properly. Our
+team is working to fix this with our own more Pythonic Kafka binding that
+implements the full protocol.
+
 .. image:: ./_static/multiconsumer.png
     :width: 60%
     :align: center
-
-.. note::
-    * Since we only store the offset for a consumer group,
-      the overhead for new consumer groups is nil
-
-Queue problems, revisited
-=========================
-
-Traditional queues (e.g. RabbitMQ / Redis):
-
-* not distributed / highly available at core
-* not persistent ("overflows" easily)
-* more consumers mean more queue server load
-
-**Kafka solves all of these problems.**
-
-.. note::
-    * out of order acks are actually expensive
-
-        * random disk seek/writes aren't cheap!
-    * more consumers = duplicated messages
 
 Kafka + Storm
 =============
@@ -552,13 +358,6 @@ Community work is ongoing for at-most-once processing.
 Able to keep up with Storm's high-throughput processing.
 
 Great for handling backpressure during traffic spikes.
-
-.. note::
-    * Be sure to explain Trident and/or at-least-once
-    * Handles backpressure by providing buffers between major
-      processing steps
-    * Doing news analytics, the traffic is bursty. Strategic messaging
-      use gives us insurance against huge events taking down our systems
 
 Kafka in Python (1)
 ===================
@@ -584,7 +383,9 @@ python-kafka (0.8+)
 Kafka in Python (2)
 ===================
 
-samsa (0.7x)
+samsa (0.7 support working, 0.8 support on branch)
+project rename coming soon, too
+
     * https://github.com/getsamsa/samsa
 
 .. sourcecode:: python
@@ -644,10 +445,9 @@ Parse.ly:
 * http://parse.ly/code
 * http://twitter.com/parsely
 
-Andrew & Keith:
+Me:
 
 * http://twitter.com/amontalenti
-* http://twitter.com/kbourgoin
 
 
 .. raw:: html
