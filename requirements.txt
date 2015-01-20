@@ -3,4 +3,4 @@ Sphinx
 Hieroglyph
 Flask
 livereload
-formic
+formic==0.9beta
