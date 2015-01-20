@@ -1,4 +1,4 @@
 #!/bin/bash
-ssh cogtree@www.cogtree.com mkdir -p /data/vhosts/parsely.com/slides/streamparse
-rsync -Pavz --exclude=.git ./_build/slides/ cogtree@www.cogtree.com:/data/vhosts/parsely.com/slides/streamparse
-rsync -Pavz --exclude=.git ./_build/html/ cogtree@www.cogtree.com:/data/vhosts/parsely.com/slides/streamparse/notes/
+ssh cogtree@ue1a-web1a.cogtree.com mkdir -p /data/vhosts/www.parsely.com/slides/streamparse
+rsync -Pavz --exclude=.git ./_build/slides/ cogtree@ue1a-web1a.cogtree.com:/data/vhosts/www.parsely.com/slides/streamparse
+rsync -Pavz --exclude=.git ./_build/html/ cogtree@ue1a-web1a.cogtree.com:/data/vhosts/www.parsely.com/slides/streamparse/notes/

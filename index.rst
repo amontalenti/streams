@@ -34,7 +34,7 @@ http://parse.ly/slides/streamparse
 
 This presentation's notes:
 
-http://parse.ly/slides/streamparse
+http://parse.ly/slides/streamparse/notes
 
 =================
 What is Parse.ly?
@@ -42,17 +42,12 @@ What is Parse.ly?
 
 What is Parse.ly?
 =================
+
+.. image:: ./_static/parsely_customers.png
+    :width: 85%
+    :align: center
 
 Web content analytics for digital storytellers.
-
-    .. image:: ./_static/banner_01.png
-        :align: center
-    .. image:: ./_static/banner_02.png
-        :align: center
-    .. image:: ./_static/banner_03.png
-        :align: center
-    .. image:: ./_static/banner_04.png
-        :align: center
 
 .. note::
 
@@ -250,7 +245,7 @@ Multi-Lang Protocol (1)
 Storm supports multiple languages through the **multi-lang protocol**.
 
 JSON protocol that works via shell-based components that communicate over
-`STDIN` and `STDOUT`.
+``STDIN`` and ``STDOUT``.
 
 Kinda quirky, but also relatively simple to implement.
 
@@ -267,10 +262,10 @@ Multi-Lang Protocol (3)
 =======================
 
 Storm Tuples are serialized by Storm worker process into JSON, sent over
-`STDIN` to components.
+``STDIN`` to components.
 
-Storm worker process also parses JSON output sent over `STDOUT` and then sends
-it to appropriate downstream tasks via Netty/ZeroMQ mechanism.
+Storm worker process also parses JSON output sent over ``STDOUT`` and then
+sends it to appropriate downstream tasks via Netty/ZeroMQ mechanism.
 
 All non-Trident mechanics supported: tuple tree, ack/fail.
 
@@ -785,7 +780,7 @@ Open Discussion Questions
 =========================
 
 - Should ``pyleus`` and ``streamparse`` sync efforts somehow?
-- Should we kill the ``streamparse`` Clojure DSL requirement?
+- Should we kill ``streamparse`` use of Clojure DSL?
 - How important is "true multi-lang"?
 - Should we write a Python DSL for ``streamparse``?
 - What do we make of Spark, pyspark, Spark Streaming?
