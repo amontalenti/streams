@@ -2,9 +2,9 @@
 Python ♥ Storm
 ==============
 
-A Pythonista in Stormland.
+A Pythonista navigating Stormy waters.
 
-by Andrew Montalenti, CTO
+Andrew Montalenti, CTO
 
 .. rst-class:: logo
 
@@ -17,9 +17,9 @@ Agenda
 
 * Parse.ly problem space
 * Why Storm for Python?
-* Why `streamparse`?
-* Other frameworks
-* Python on Storm examples
+* Multi-Lang Protocol
+* Why ``streamparse``?
+* Logs and Kafka
 
 Admin
 =====
@@ -171,8 +171,12 @@ Parse.ly Architecture, 2014
     :width: 90%
     :align: center
 
-Introducing Storm
 =================
+Discovering Storm
+=================
+
+What is this Storm thing?
+=========================
 
 We read:
 
@@ -182,25 +186,206 @@ We read:
 
 Hmm...
 
-storm.py
-========
+Storm is "Javanonic"
+====================
+
+Ironic term one of my engineers came up with for a project that feels very
+Java-like, and not very "Pythonic".
+
+Examples:
+
+- Topologies specified using a Java builder interface (eek).
+- Topologies built from CLI using Maven tasks (yuck).
+- Topology submission needs a JAR of your code (ugh).
+- No simple interactive or local dev workflow built-in (boo).
+- Talking to the Storm cluster uses Thrift interfaces (shrug).
+
+Storm as Infrastructure
+=======================
+
+Do we consider Cassandra, Zookeeper, or Elasticsearch to be "projects for Java
+developers", or "system infrastructure that happens to be implemented in
+Java?"
+
+I'd argue for these projects, it's the latter.
+
+One would hope that Storm could attain this same status.
+
+That is, a **cross-language real-time computation infrastructure**, rather than
+a **Java real-time computation framework with some multi language support.**
+
+Where Python is a **first-class citizen**.
+
+Python GIL
+==========
+
+Python's GIL does not allow true multi-thread parallelism:
+
+.. image:: _static/python_gil_new.png
+    :align: center
+    :width: 80%
+
+And on multi-core, it even leads to lock contention:
+
+.. image:: _static/python_gil.png
+    :align: center
+    :width: 80%
+
+Python Processes
+================
+
+For a Python programmer, Storm provides a way to get **process-level
+parallelism** while avoiding the perils of multi-threading.
+
+Sweet!
+
+This is like Celery, RQ, multiprocessing, joblib, but with the added benefit of
+**data flows** and **reliability**.
+
+We'll take it!
+
+Multi-Lang Protocol (1)
+=======================
+
+Storm supports multiple languages through the **multi-lang protocol**.
+
+JSON protocol that works via shell-based components that communicate over
+`STDIN` and `STDOUT`.
+
+Kinda quirky, but also relatively simple to implement.
+
+Multi-Lang Protocol (2)
+=======================
+
+Each component of a Storm topology is either a ``ShellSpout`` or ``ShellBolt``.
+
+Storm worker invokes **one sub-process per shell component per Storm task**.
+
+If ``p = 8``, then 8 Python processes are spawned under a worker.
+
+Multi-Lang Protocol (3)
+=======================
+
+Storm Tuples are serialized by Storm worker process into JSON, sent over
+`STDIN` to components.
+
+Storm worker process also parses JSON output sent over `STDOUT` and then sends
+it to appropriate downstream tasks via Netty/ZeroMQ mechanism.
+
+All non-Trident mechanics supported: tuple tree, ack/fail.
+
+Packaging for Multi-Lang
+========================
+
+Java topologies are simply added to the classpath and appropriate Storm
+classes are instantiated.
+
+Multi-Lang uses the ``/resources`` path in the JAR.
+
+Storm will explode ``/resources`` into a scratch area and code will be run out
+of there.
+
+When using the bundled module, you **copy-paste** ``storm.py`` adapter in
+your ``/resources`` directory and ``import storm`` to speak the protocol.
+
+Very Javanonic.
+
+Biggest storm.py issues
+=======================
+
+- No unit tests
+- No documentation
+- No local dev workflow
+- ``print`` statement breaks topology
+- Cannot ``pip install``
+- Packaging is a nightmare
+
+Petrel, the Good
+================
+
+- First serious effort to make Storm Pythonic.
+- Open source by AirSage around ~2012.
+- Rewrites ``storm.py`` IPC layer.
+- Bundles a JAR builder.
+- Implements a Python Topology DSL of sorts.
+- Uses Thrift for Topology construction.
+
+We used Petrel from 2012-2014.
+
+Petrel, the Bad
+===============
+
+- No commits in last 10 months.
+- Maintainer no longer using Storm.
+- Doesn't allow standard Python import paths.
+- Deploys take a long time.
+- Dependency management is strangely done.
+- Requires local Thrift installation to work.
+- Still doesn't solve local dev workflow.
+
+"What if we had a Pythonic Storm lib?"
+======================================
+
+- Idea was brewing on Parse.ly team in Jan 2014.
+- Backend team had just grown up, new engineers.
+- New engineers had trouble with Storm.
+- I discovered ``storm-test`` and ``Clojure DSL``.
+- Colleague started a clean-house IPC layer.
+
+Enter streamparse
+=================
+
+0.1 release at PyData Silicon Valley 2014 in Apr 2014.
+
+Talk, `"Real-Time Streams and Logs"`_, introduced it.
+
+550+ stars `on Github`_, was a trending repo in May 2014.
+
+70+ mailing list members and 4 new committers.
+
+Major corporate and academic entities using it.
+
+Funding `from DARPA`_ to continue developing it. (Yes, really!)
+
+.. _"Real-Time Streams and Logs": https://www.youtube.com/watch?v=od8U-XijzlQ
+.. _on Github: https://github.com/Parsely/streamparse
+.. _from DARPA: http://www.fastcompany.com/3040363/the-future-of-search-brought-to-you-by-the-pentagon
+
+streamparse CLI
+===============
+
+``sparse`` provides a CLI front-end to ``streamparse``, a framework for
+creating Python projects for running, debugging, and submitting Storm
+topologies for data processing.
+
+After installing the ``lein`` (only dependency), you can run::
+
+    pip install streamparse
+
+This will offer a command-line tool, ``sparse``. Use::
+
+    sparse quickstart
+
+Running and debugging
+=====================
+
+You can then run the local Storm topology using::
+
+    $ sparse run
+    Running wordcount topology...
+    Options: {:spec "topologies/wordcount.clj", ...}
+    #<StormTopology StormTopology(spouts:{word-spout=...
+    storm.daemon.nimbus - Starting Nimbus with conf {...
+    storm.daemon.supervisor - Starting supervisor with id 4960ac74...
+    storm.daemon.nimbus - Received topology submission with conf {...
+    ... lots of output as topology runs...
+
+streamparse vs storm.py
+=======================
 
 .. image:: _static/streamparse_comp.png
     :align: center
     :width: 80%
-
-Petrel (1)
-==========
-
-- First serious effort to make Storm Pythonic.
-- Open source by AirSage around ~2012.
-- No commits in last 10 months.
-- Maintainer no longer using Storm.
-
-Petrel Design
-=============
-
-- ...
 
 Word Stream Spout (Storm)
 =========================
@@ -241,7 +426,7 @@ Word Count Bolt (Storm)
     {"count-bolt" (python-bolt-spec
             options
             {"word-spout" :shuffle}
-            "bolts.wordcount.WordCount
+            "bolts.wordcount.WordCount"
              ["word" "count"]
              :p 2
            )
@@ -267,34 +452,137 @@ Word Count Bolt in Python
             self.emit([word, self.counts[word]])
             self.log('%s: %d' % (word, self.counts[word]))
 
-streamparse
+config.json
 ===========
 
-``sparse`` provides a CLI front-end to ``streamparse``, a framework for
-creating Python projects for running, debugging, and submitting Storm
-topologies for data processing.
+.. sourcecode:: javascript
 
-After installing the ``lein`` (only dependency), you can run::
+    {
+        "topology_specs": "topologies/",
+        "envs": {
+            "0.8": {
+                "user": "cogtree",
+                "nimbus": "ue1a-storm-head.cogtree.com:6627",
+                "workers": ["ue1a-storm1.cogtree.com",
+                            "ue1a-storm2.cogtree.com"],
+                "log_path": "/var/log/cogtree/storm",
+                "virtualenv_root": "/data/virtualenvs"
+            },
+            "vagrant": {
+                "user": "cogtree",
+                "nimbus": "vagrant:6627",
+                "workers": ["vagrant"],
+                "log_path": "/home/cogtree/storm/logs",
+                "virtualenv_root": "/home/cogtree/virtualenvs"
+            }
+        }
+    }
 
-    pip install streamparse
+streamparse projects
+====================
 
-This will offer a command-line tool, ``sparse``. Use::
+.. image:: ./_static/streamparse_project.png
+    :width: 90%
+    :align: center
 
-    sparse quickstart
+But wait, there's more!
+=======================
 
-Running and debugging
-=====================
+Got it into production in the summer of 2014.
 
-You can then run the local Storm topology using::
+The effort just snowballed from there.
 
-    $ sparse run
-    Running wordcount topology...
-    Options: {:spec "topologies/wordcount.clj", ...}
-    #<StormTopology StormTopology(spouts:{word-spout=...
-    storm.daemon.nimbus - Starting Nimbus with conf {...
-    storm.daemon.supervisor - Starting supervisor with id 4960ac74...
-    storm.daemon.nimbus - Received topology submission with conf {...
-    ... lots of output as topology runs...
+Added a lot more functionality to the CLI tools.
+
+IPC layer saw Pythonic improvements.
+
+Better support for logging.
+
+A solid ``BatchingBolt`` implementation.
+
+Several ``auto_`` class options.
+
+sparse options
+==============
+
+.. sourcecode:: text
+
+    $ sparse help
+
+    Usage:
+            sparse quickstart <project_name>
+            sparse run [-o <option>]... [-p <par>] [-t <time>] [-dv]
+            sparse submit [-o <option>]... [-p <par>] [-e <env>] [-dvf]
+            sparse list [-e <env>] [-v]
+            sparse kill [-e <env>] [-v]
+            sparse tail [-e <env>] [--pattern <regex>]
+            sparse visualize [--flip]
+            sparse (-h | --help)
+            sparse --version
+
+sparse visualize
+================
+
+.. image:: ./_static/streamparse_visualize.png
+    :width: 90%
+    :align: center
+
+BatchingBolt
+============
+
+.. sourcecode:: python
+
+    from streamparse.bolt import BatchingBolt
+
+    class WordCounterBolt(BatchingBolt):
+
+        secs_between_batches = 5
+
+        def group_key(self, tup):
+            # collect batches of words
+            word = tup.values[0]
+            return word
+
+        def process_batch(self, key, tups):
+            # emit the count of words we had per 5s batch
+            self.emit([key, len(tups)])
+
+Use cases for BatchingBolt
+==========================
+
+We use for writing to data stores:
+
+- Cassandra
+- Elasticsearch
+- Redis
+- MongoDB
+
+Background thread handles tuple grouping and timer thread for flushing batches.
+
+Adds **reliable micro-batching** to Storm.
+
+``auto_`` properties
+====================
+
+============= ========================================
+property      What it does
+============= ========================================
+auto_ack      ack tuple after ``process``
+auto_fail     fail tuple when exception in ``process``
+auto_anchor   anchor tuple via incoming tuple ID
+============= ========================================
+
+.. sourcecode:: python
+
+    class WordCounter(Bolt):
+
+        auto_fail = False
+        auto_ack = False
+        auto_anchor = False
+
+        def process(self, tup):
+            word = tup.values[0]
+            self.emit([word])
 
 ======================
 A New Parse.ly Backend
@@ -321,13 +609,6 @@ A vision for new metrics
     :width: 50%
     :align: center
 
-More scale
-==========
-
-.. image:: _static/parsely_scale.png
-    :width: 50%
-    :align: center
-
 ======================
 Organizing around logs
 ======================
@@ -337,10 +618,6 @@ Kafka and Multi-consumer
 
 Even if Kafka's availability and scalability story isn't interesting to you,
 the **multi-consumer story should be**.
-
-Unfortunately, `kafka-python` does not support multi-consumer properly. Our
-team is working to fix this with our own more Pythonic Kafka binding that
-implements the full protocol.
 
 .. image:: ./_static/multiconsumer.png
     :width: 60%
@@ -362,8 +639,11 @@ Great for handling backpressure during traffic spikes.
 Kafka in Python (1)
 ===================
 
-python-kafka (0.8+)
-    * https://github.com/mumrah/kafka-python
+``kafka-python``. Ugh, yet more problems!
+
+No consumer groups for Python in 0.8!!!!
+
+https://github.com/mumrah/kafka-python
 
 .. sourcecode:: python
 
@@ -372,42 +652,64 @@ python-kafka (0.8+)
 
     kafka = KafkaClient('localhost:9092')
     consumer = SimpleConsumer(kafka, 'test_consumer', 'raw_data')
-    start = time.time()
     for msg in consumer:
-        count += 1
-        if count % 1000 == 0:
-            dur = time.time() - start
-            print 'Reading at {:.2f} messages/sec'.format(dur/1000)
-            start = time.time()
+        pass
 
 Kafka in Python (2)
 ===================
 
-samsa (0.7 support working, 0.8 support on branch)
-project rename coming soon, too
+Resurrecting our own project, ``samsa``.
 
-    * https://github.com/getsamsa/samsa
+0.7 support working, 0.8 support on branch. Will rename project soon to avoid
+confusion with ``samza``.
+
+https://github.com/getsamsa/samsa
 
 .. sourcecode:: python
 
-    import time
-    from kazoo.client import KazooClient
     from samsa.cluster import Cluster
+    from kazoo.client import KazooClient
 
-    zk = KazooClient()
-    zk.start()
-    cluster = Cluster(zk)
+    zk = KazooClient(); zk.start(); cluster = Cluster(zk)
     queue = cluster.topics['raw_data'].subscribe('test_consumer')
-    start = time.time()
+    count = 0
     for msg in queue:
         count += 1
-        if count % 1000 == 0:
-            dur = time.time() - start
-            print 'Reading at {:.2f} messages/sec'.format(dur/1000)
-            queue.commit_offsets() # commit to zk every 1k msgs
+        if count % 1000 == 0: queue.commit_offsets()
 
-Other Log-Centric Companies
-===========================
+Kafka JVM Spout in streamparse?
+===============================
+
+Wrote an example project that uses built-in ``storm-kafka`` spout with
+streamparse by instantiated a JVM Spout via Clojure code.
+
+It works, but it's a bit painful to set up.
+
+.. sourcecode:: clojure
+
+    (def spout-config
+        (let [cfg (SpoutConfig. kafka-zk-hosts
+                                topic-name
+                                kafka-zk-root
+                                kafka-consumer-id)]
+            (set! (. cfg scheme)
+                  (SchemeAsMultiScheme. (StringScheme.)))
+            (set! (. cfg forceFromStart) true)
+            cfg))
+
+    (def spout (KafkaSpout. spout-config))
+
+Kafka in future ``streamparse`` releases
+========================================
+
+Hope to bundle a ``KafkaSpout`` and ``KafkaBolt``, written in Python.
+
+Add a soft dependency to our new, upcoming high-performance Kafka client library.
+
+Would simplify all that setup.
+
+Clearly, Kafka Matters
+======================
 
 ============= ========= ========
 Company       Logs      Workers
@@ -422,18 +724,73 @@ LivePerson    Kafka     Storm
 Netflix       Kafka     ???
 ============= ========= ========
 
-==========
-Conclusion
-==========
+===================
+Recent Developments
+===================
 
-What we've learned
-==================
+pyleus
+======
 
-* There is no **silver bullet** data processing technology.
-* Log storage is very cheap, and getting cheaper.
-* "Timestamped facts" is rawest form of data available.
-* Storm and Kafka allow you to develop atop those facts.
-* Organizing around real-time logs is a wise decision.
+In Oct 2014, Yelp released `pyleus`_, an alternative to ``Petrel`` and ``streamparse``.
+
+Apparently used inside Yelp for managing Python Topologies running on Storm.
+
+Largely similar design to ``streamparse``.
+
+One really cool part: **MessagePack Serializer!**
+
+.. _pyleus: http://engineeringblog.yelp.com/2014/10/introducing-pyleus.html
+
+pyleus comparison (1)
+=====================
+
+============== =================== =============================
+area           pyleus              streamparse
+============== =================== =============================
+Topo DSL       YAML                Storm Clojure DSL
+virtualenv     Embed-in-JAR        Deploy-via-SSH
+Storm API      Java Code           Clojure Code
+Local Test     ``pyleus local``    ``sparse run``
+Submit         ``pyleus submit``   ``sparse submit``
+============== =================== =============================
+
+pyleus comparison (2)
+=====================
+
+================ =================== ==================
+area             pyleus              streamparse
+================ =================== ==================
+List             ``pyleus list``     ``sparse list``
+Configuration    Python conf         JSON conf
+Unit Tests       Yes                 Yes
+Docs             Yes                 Yes
+Uses Thrift?     No                  No
+================ =================== ==================
+
+Python Topology DSL?
+====================
+
+"What I'm proposing instead is to ditch the idea of specifying topologies via
+configuration files and do it instead via an interpreted general purpose
+programming language (like Python)."
+
+"By using an interpreted language, you can construct and submit topologies
+without having to do a compilation."
+
+Comments recently by Nathan Marz in `STORM-561`_.
+
+.. _STORM-561: https://issues.apache.org/jira/browse/STORM-561
+
+Open Discussion Questions
+=========================
+
+- Should ``pyleus`` and ``streamparse`` sync efforts somehow?
+- Should we kill the ``streamparse`` Clojure DSL requirement?
+- How important is "true multi-lang"?
+- Should we write a Python DSL for ``streamparse``?
+- What do we make of Spark, pyspark, Spark Streaming?
+
+DISCUSS!
 
 Questions?
 ==========
