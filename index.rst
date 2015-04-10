@@ -792,15 +792,20 @@ Questions?
 
 Go forth and stream!
 
-Parse.ly:
+Looking for a job where you can work from home?
 
-* http://parse.ly/code
-* http://twitter.com/parsely
+We're `hiring`_!
 
-Me:
+Parse.ly Code: http://parse.ly/code
 
-* http://twitter.com/amontalenti
+Parse.ly on Twitter: `@Parsely`_
 
+Me on Twitter: `@amontalenti`_
+
+
+.. _hiring: http://parse.ly/jobs
+.. _@Parsely: http://twitter.com/Parsely
+.. _@amontalenti: http://twitter.com/amontalenti
 
 .. raw:: html
 
