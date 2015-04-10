@@ -1,6 +1,6 @@
-==============
-Python ♥ Storm
-==============
+===========
+streamparse
+===========
 
 A Pythonista navigating Stormy waters.
 
@@ -12,57 +12,113 @@ Andrew Montalenti, CTO
         :width: 40%
         :align: right
 
-Agenda
-======
+==========
+Background
+==========
 
-* Parse.ly problem space
-* Why Storm for Python?
-* Multi-Lang Protocol
-* Why ``streamparse``?
-* Logs and Kafka
+Me
+==
+
+- Hacking in Python for over a decade
+- Exile of Wall Street programming in Java
+- CTO/co-founder of Parse.ly
+- Fully distributed team
+- Python all the things
+
+**@amontalenti** on Twitter:
+
+http://twitter.com/amontalenti
+
+What is Parse.ly?
+=================
+
+Web content analytics for digital storytellers.
+
+Some of our customers:
+
+.. image:: ./_static/parsely_customers.png
+    :width: 98%
+    :align: center
+
+Elegant data dashboards
+=======================
+
+Informing thousands of editors and writers every day:
+
+.. image:: ./_static/glimpse.png
+    :width: 98%
+    :align: center
+
+Powerful data APIs
+==================
+
+Powering billions of site visits every month:
+
+.. image:: ./_static/newyorker_related.png
+    :width: 98%
+    :align: center
+
+What is Storm?
+==============
+
+.. image:: ./_static/storm_applied.png
+    :width: 90%
+    :align: center
+
+Why should I care?
+==================
+
+- Defeat the GIL!
+- Avoid Threads
+- Horizontally Scale CPUs
+- Built-in Data Reliability
+- Log-Oriented Architecture
+- Impress Your Friends
+
+Python Can't Scale?
+===================
+
+Eat that:
+
+.. image:: ./_static/cpu_cores.png
+    :width: 90%
+    :align: center
+
+Motivating for streamparse
+==========================
+
+.. image:: ./_static/streamparse_logo.png
+
+streamparse lets you parse real-time streams of data.
+
+It smoothly integrates Python code with Apache Storm.
+
+Easy quickstart, good CLI/tooling, production tested.
 
 Admin
 =====
 
-Our presentations and code:
+Again, **@amontalenti** on Twitter.
 
-http://parse.ly/code
+I've scheduled a few tweets to go out during my talk
+with links to all the stuff related to my talk:
 
-This presentation's slides:
+- http://parse.ly/code
+- http://parse.ly/slides/streamparse
+- http://parse.ly/slides/streamparse/notes
 
-http://parse.ly/slides/streamparse
+Agenda
+======
 
-This presentation's notes:
+* Why is time series data hard?
+* How does Storm work?
+* How does Python integrate with Storm?
+* stremaparse design and internals
+* Logs and Kafka (pykafka preview)
 
-http://parse.ly/slides/streamparse/notes
-
-=================
-What is Parse.ly?
-=================
-
-What is Parse.ly?
-=================
-
-.. image:: ./_static/parsely_customers.png
-    :width: 85%
-    :align: center
-
-Web content analytics for digital storytellers.
-
-.. note::
-
-    Gives web content teams a clear understanding about
-    **what readers want** and how to deliver it to them
-    in the most effective way.
-
-    Answers questions for journalists and editors, like:
-
-    * What stories are **most popular in the last 4 hours**?
-    * Which **authors drive the most Facebook traffic**?
-    * What is the relationship between **sharing and reading**?
-
-    For product teams, our API enables **dynamic content
-    recommendations** which can be implemented in minutes.
+==========================
+Time Series Data Challenge
+==========================
 
 Velocity
 ========
@@ -73,12 +129,6 @@ Average post has **<48-hour shelf life**.
     :width: 60%
     :align: center
 
-.. note::
-
-    * many posts get **most traffic in first few hours**
-    * major news events can cause **bursty traffic**
-
-
 Volume
 ======
 
@@ -87,47 +137,33 @@ Top publishers write **1000's of posts per day**.
 .. image:: ./_static/sparklines_multiple.png
     :align: center
 
-
-.. note::
-
-    * huge **long tail of posts** get traffic forever
-    * Parse.ly tracks **8 billion page views per month**
-    * ... from **over 250 million monthly unique browsers**
-
-Time series data
-================
+Timeline Aggregation
+====================
 
 .. image:: ./_static/sparklines_stacked.png
     :align: center
 
-Summary data
-============
+Rollups and Summaries
+=====================
 
 .. image:: ./_static/summary_viz.png
     :align: center
 
-Ranked data
-===========
+Rankings and Sparklines
+=======================
 
 .. image:: ./_static/comparative.png
     :align: center
 
-Benchmark data
-==============
+Benchmarks
+==========
 
 .. image:: ./_static/benchmarked_viz.png
     :align: center
 
-Information radiators
-=====================
-
-.. image:: ./_static/glimpse.png
-    :width: 100%
-    :align: center
-
-======================
-Architecture evolution
-======================
+=======================
+From "workers" to Storm
+=======================
 
 Parse.ly Architecture, 2012
 ===========================
@@ -136,15 +172,6 @@ Parse.ly Architecture, 2012
     :width: 90%
     :align: center
 
-
-.. note::
-
-    To add more features, we had to add more workers and queues!
-
-    Got harder and harder to develop on "the entire stack".
-
-    More code devoted to ops, rather than business logic.
-
 It started to get messy
 =======================
 
@@ -152,23 +179,12 @@ It started to get messy
     :width: 90%
     :align: center
 
-Parse.ly Data Sources
-=====================
+Organizing Around Logs
+======================
 
-.. image:: ./_static/parsely_data_sources.png
-    :width: 70%
-    :align: center
-
-Parse.ly Architecture, 2014
-===========================
-
-.. image:: ./_static/parsely_log_arch.png
+.. image:: ./_static/streamparse_reference.png
     :width: 90%
     :align: center
-
-=================
-Discovering Storm
-=================
 
 What is this Storm thing?
 =========================
@@ -181,13 +197,211 @@ We read:
 
 Hmm...
 
+Storm Concepts
+==============
+
+Storm provides an abstraction for cluster computing:
+
+- Tuple
+- Spout
+- Bolt
+- Stream
+- Topology
+
+Wired Topology
+==============
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/topology.png
+        :width: 80%
+        :align: center
+
+WARNING
+=======
+
+All the code in the following 5 slides or so is pseudocode.
+
+**Just meant to illustrate Storm ideas.**
+
+Tuple
+=====
+
+A single data record that flows through your cluster.
+
+.. sourcecode:: python
+
+    # tuple spec: ["word"]
+    word = ("dog",)
+    # tuple spec: ["word", "count"]
+    word_count = ("dog", 4)
+
+Spout
+=====
+
+A source of tuples emitted into a cluster.
+
+.. sourcecode:: python
+
+    # spout spec: "word-spout"
+    while num_tuples < max_num_tuples:
+        one_tuple = kafka.get()
+        storm.emit(one_tuple, "word-count-bolt")
+        time.sleep(1)
+
+Bolt
+====
+
+A processing node in your cluster's computation.
+
+.. sourcecode:: python
+
+    # bolt spec: "first-bolt"
+    while True:
+        word = storm.recv("word-spout")
+        word_count = word_count_bolt.process(word)
+        storm.ack(word)
+        storm.emit(word_count, "debug-print-bolt")
+        time.sleep(1)
+
+Stream
+======
+
+A flow of tuples between two components (Bolts or Spouts).
+
+.. sourcecode:: python
+
+    stream_spec = ["word", "count"]:
+    stream_wiring = ("first-spout",
+                     # =>
+                     "first-bolt")
+    stream_grouping = "word" # or, ":shuffle"
+
+Topology
+========
+
+Directed Acyclic Graph (DAG) describing it all.
+
+.. sourcecode:: python
+
+    class WordCount(Topology):
+        name = "word-count-topology"
+        spouts = [
+            Words(name="word-spout", out=["word"], p=4)
+        ]
+        bolts = [
+            WordCount(name="word-count-bolt",
+                      from=Words,
+                      group_on="word",
+                      out=["word", "count"],
+                      p=8)
+            DebugPrint(name="debug-print-bolt",
+                       from=WordCount,
+                       p=1)
+        ]
+
+Running in Storm UI
+===================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_ui.png
+        :width: 98%
+        :align: center
+
+Running in Storm Cluster
+========================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_cluster.png
+        :width: 80%
+        :align: center
+
+Workers and Empty Slots
+=======================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_slots_empty.png
+        :width: 90%
+        :align: center
+
+Filled Slots and Rebalancing
+============================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_slots_filled.png
+        :width: 90%
+        :align: center
+
+BTW, Buy This Book!
+===================
+
+Storm Applied, by Manning Press.
+
+Reviewed in `Storm, The Big Reference`_.
+
+.. image:: ./_static/storm_applied.png
+    :width: 50%
+    :align: center
+
+TODO: change blog post link
+
+.. _Storm, The Big Reference: http://parse.ly
+
+
+Network Transfer of Tuples
+==========================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_transfer.png
+        :width: 90%
+        :align: center
+
+Finally, Persist Your Calculations
+==================================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_data.png
+        :width: 80%
+        :align: center
+
+
+So, Storm is Sorta Amazing!
+==========================
+
+Storm will:
+
+- allocate Python process slots on physical nodes
+- map a computation DAG onto those slots automatically
+- guarantee processing of tuples with an ack/fail model
+- let us rebalance computation evenly among nodes
+
+Beat the GIL and scale Python horizontally with ease!
+
+Let's Do This!
+==============
+
+.. image:: ./_static/cpu_cores.png
+    :width: 90%
+    :align: center
+
+================
+Java: Womp, Womp
+================
+
 Storm is "Javanonic"
 ====================
 
 Ironic term one of my engineers came up with for a project that feels very
 Java-like, and not very "Pythonic".
 
-Examples:
+Storm Java Quirks
+=================
 
 - Topologies specified using a Java builder interface (eek).
 - Topologies built from CLI using Maven tasks (yuck).
@@ -195,21 +409,29 @@ Examples:
 - No simple interactive or local dev workflow built-in (boo).
 - Talking to the Storm cluster uses Thrift interfaces (shrug).
 
+Java Projects Need Not Stink
+============================
+
+Consider Cassandra, Zookeeper, or Elasticsearch.
+
+These aren't "projects for Java developers".
+
+They are "cross-language system infrastructure..."
+
+"... that happens to be written in Java."
+
 Storm as Infrastructure
 =======================
 
-Do we consider Cassandra, Zookeeper, or Elasticsearch to be "projects for Java
-developers", or "system infrastructure that happens to be implemented in
-Java?"
-
-I'd argue for these projects, it's the latter.
-
 One would hope that Storm could attain this same status.
 
-That is, a **cross-language real-time computation infrastructure**, rather than
-a **Java real-time computation framework with some multi language support.**
+That is: **multi-lang real-time computation infrastructure.**
+
+Not: **Java real-time computation (some multi-lang support).**
 
 Where Python is a **first-class citizen**.
+
+(Storm can solve the GIL at the system level!)
 
 Python GIL
 ==========
@@ -225,6 +447,14 @@ And on multi-core, it even leads to lock contention:
 .. image:: _static/python_gil.png
     :align: center
     :width: 80%
+
+`@dabeaz`_ discussed this in a Friday talk on concurrency.
+
+.. _@dabeaz: http://twitter.com/dabeaz
+
+===========================
+Getting Pythonic with Storm
+===========================
 
 Python Processes
 ================
@@ -295,29 +525,6 @@ Biggest storm.py issues
 - Cannot ``pip install``
 - Packaging is a nightmare
 
-Petrel, the Good
-================
-
-- First serious effort to make Storm Pythonic.
-- Open source by AirSage around ~2012.
-- Rewrites ``storm.py`` IPC layer.
-- Bundles a JAR builder.
-- Implements a Python Topology DSL of sorts.
-- Uses Thrift for Topology construction.
-
-We used Petrel from 2012-2014.
-
-Petrel, the Bad
-===============
-
-- No commits in last 10 months.
-- Maintainer no longer using Storm.
-- Doesn't allow standard Python import paths.
-- Deploys take a long time.
-- Dependency management is strangely done.
-- Requires local Thrift installation to work.
-- Still doesn't solve local dev workflow.
-
 "What if we had a Pythonic Storm lib?"
 ======================================
 
@@ -334,9 +541,11 @@ Enter streamparse
 
 Talk, `"Real-Time Streams and Logs"`_, introduced it.
 
-550+ stars `on Github`_, was a trending repo in May 2014.
+600+ stars `on Github`_, was a trending repo in May 2014.
 
-70+ mailing list members and 4 new committers.
+80+ mailing list members and 4 new committers.
+
+Two Parse.ly engineers maintaining it.
 
 Major corporate and academic entities using it.
 
@@ -500,6 +709,8 @@ Several ``auto_`` class options.
 sparse options
 ==============
 
+TODO: add sparse stats
+
 .. sourcecode:: text
 
     $ sparse help
@@ -580,31 +791,6 @@ auto_anchor   anchor tuple via incoming tuple ID
             self.emit([word])
 
 ======================
-A New Parse.ly Backend
-======================
-
-Reference Architecture
-======================
-
-.. image:: ./_static/parsely_ref_arch.png
-    :width: 90%
-    :align: center
-
-Complete F/OSS Stack
-====================
-
-.. image:: ./_static/parsely_oss.png
-    :width: 90%
-    :align: center
-
-A vision for new metrics
-========================
-
-.. image:: _static/parsely_icons.png
-    :width: 50%
-    :align: center
-
-======================
 Organizing around logs
 ======================
 
@@ -615,6 +801,17 @@ Even if Kafka's availability and scalability story isn't interesting to you,
 the **multi-consumer story should be**.
 
 .. image:: ./_static/multiconsumer.png
+    :width: 60%
+    :align: center
+
+Kafka Consumer Groups
+=====================
+
+Consumer groups let you consume a large stream in a partitioned and balanced way.
+
+Leverage multi-core and multi-node parallelism in Storm Spouts.
+
+.. image:: ./_static/consumer_groups.png
     :width: 60%
     :align: center
 
@@ -631,77 +828,24 @@ Able to keep up with Storm's high-throughput processing.
 
 Great for handling backpressure during traffic spikes.
 
-Kafka in Python (1)
-===================
+pykafka
+=======
 
-``kafka-python``. Ugh, yet more problems!
+Resurrecting our own project, ``samsa``, renamed as ``pykafka``.
 
-No consumer groups for Python in 0.8!!!!
+- For Kafka 0.8.2
+- SimpleConsumer **and** BalancedConsumer (with consumer groups)
+- Pure Python protocol implementation
+- C protocol implementation (via librdkafka)
 
-https://github.com/mumrah/kafka-python
-
-.. sourcecode:: python
-
-    from kafka.client import KafkaClient
-    from kafka.consumer import SimpleConsumer
-
-    kafka = KafkaClient('localhost:9092')
-    consumer = SimpleConsumer(kafka, 'test_consumer', 'raw_data')
-    for msg in consumer:
-        pass
-
-Kafka in Python (2)
-===================
-
-Resurrecting our own project, ``samsa``.
-
-0.7 support working, 0.8 support on branch. Will rename project soon to avoid
-confusion with ``samza``.
-
-https://github.com/getsamsa/samsa
-
-.. sourcecode:: python
-
-    from samsa.cluster import Cluster
-    from kazoo.client import KazooClient
-
-    zk = KazooClient(); zk.start(); cluster = Cluster(zk)
-    queue = cluster.topics['raw_data'].subscribe('test_consumer')
-    count = 0
-    for msg in queue:
-        count += 1
-        if count % 1000 == 0: queue.commit_offsets()
-
-Kafka JVM Spout in streamparse?
-===============================
-
-Wrote an example project that uses built-in ``storm-kafka`` spout with
-streamparse by instantiated a JVM Spout via Clojure code.
-
-It works, but it's a bit painful to set up.
-
-.. sourcecode:: clojure
-
-    (def spout-config
-        (let [cfg (SpoutConfig. kafka-zk-hosts
-                                topic-name
-                                kafka-zk-root
-                                kafka-consumer-id)]
-            (set! (. cfg scheme)
-                  (SchemeAsMultiScheme. (StringScheme.)))
-            (set! (. cfg forceFromStart) true)
-            cfg))
-
-    (def spout (KafkaSpout. spout-config))
+https://github.com/Parsely/pykafka
 
 Kafka in future ``streamparse`` releases
 ========================================
 
 Hope to bundle a ``KafkaSpout`` and ``KafkaBolt``, written in Python.
 
-Add a soft dependency to our new, upcoming high-performance Kafka client library.
-
-Would simplify all that setup.
+Add a soft dependency to ``pykafka``.
 
 Clearly, Kafka Matters
 ======================
@@ -714,53 +858,13 @@ Twitter       Kafka     Storm*
 Pinterest     Kafka     Storm
 Spotify       Kafka     Storm
 Wikipedia     Kafka     Storm
-Outbrain      Kafka     Storm
-LivePerson    Kafka     Storm
+Yahoo         Kafka     Storm
 Netflix       Kafka     ???
 ============= ========= ========
 
 ===================
 Recent Developments
 ===================
-
-pyleus
-======
-
-In Oct 2014, Yelp released `pyleus`_, an alternative to ``Petrel`` and ``streamparse``.
-
-Apparently used inside Yelp for managing Python Topologies running on Storm.
-
-Largely similar design to ``streamparse``.
-
-One really cool part: **MessagePack Serializer!**
-
-.. _pyleus: http://engineeringblog.yelp.com/2014/10/introducing-pyleus.html
-
-pyleus comparison (1)
-=====================
-
-============== =================== =============================
-area           pyleus              streamparse
-============== =================== =============================
-Topo DSL       YAML                Storm Clojure DSL
-virtualenv     Embed-in-JAR        Deploy-via-SSH
-Storm API      Java Code           Clojure Code
-Local Test     ``pyleus local``    ``sparse run``
-Submit         ``pyleus submit``   ``sparse submit``
-============== =================== =============================
-
-pyleus comparison (2)
-=====================
-
-================ =================== ==================
-area             pyleus              streamparse
-================ =================== ==================
-List             ``pyleus list``     ``sparse list``
-Configuration    Python conf         JSON conf
-Unit Tests       Yes                 Yes
-Docs             Yes                 Yes
-Uses Thrift?     No                  No
-================ =================== ==================
 
 Python Topology DSL?
 ====================
@@ -774,18 +878,15 @@ without having to do a compilation."
 
 Comments recently by Nathan Marz in `STORM-561`_.
 
+P. Taylor Goetz responded to it by creating `flux`_.
+
 .. _STORM-561: https://issues.apache.org/jira/browse/STORM-561
+.. _flux: https://github.com/ptgoetz/flux
 
-Open Discussion Questions
-=========================
+pystorm
+=======
 
-- Should ``pyleus`` and ``streamparse`` sync efforts somehow?
-- Should we kill ``streamparse`` use of Clojure DSL?
-- How important is "true multi-lang"?
-- Should we write a Python DSL for ``streamparse``?
-- What do we make of Spark, pyspark, Spark Streaming?
-
-DISCUSS!
+...
 
 Questions?
 ==========
@@ -796,12 +897,41 @@ Looking for a job where you can work from home?
 
 We're `hiring`_!
 
-Parse.ly Code: http://parse.ly/code
-
 Parse.ly on Twitter: `@Parsely`_
 
 Me on Twitter: `@amontalenti`_
 
+========
+Appendix
+========
+
+Multi-Lang Impl's in Python
+===========================
+
+- `storm.py`_ (Storm, XXX 2010)
+- `Petrel`_ (AirSage, XXX 2010)
+- `streamparse`_ (Parse.ly, Apr 2014)
+- `pyleus`_ (Yelp, Oct 2014)
+
+TODO: fix these links.
+
+Plan to unify around pystorm.
+
+.. _Petrel: http://github.com/AirSage/Petrel
+.. _pyleus: http://engineeringblog.yelp.com/2014/10/introducing-pyleus.html
+.. _streamparse: http://github.com/Parsely/streamparse
+.. _flux: https://github.com/ptgoetz/flux
+
+Other Projects
+==============
+
+- `flux`_ - YAML
+- `pyleus`_ - YAML (Python-specific)
+- `Petrel`_ - Python
+- `Clojure DSL`_ - Bundled with Storm
+- `Trident`_ - Java "high-level" DSL bundled with Storm
+
+streamparse uses simplified Clojure DSL; will add Python DSL.
 
 .. _hiring: http://parse.ly/jobs
 .. _@Parsely: http://twitter.com/Parsely
