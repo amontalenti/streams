@@ -12,12 +12,8 @@ Andrew Montalenti, CTO
         :width: 40%
         :align: right
 
-==========
-Background
-==========
-
-Me
-==
+About Me
+========
 
 - Hacking in Python for over a decade
 - Exile of Wall Street programming in Java
@@ -28,130 +24,6 @@ Me
 **@amontalenti** on Twitter:
 
 http://twitter.com/amontalenti
-
-What is Parse.ly?
-=================
-
-Web content analytics for digital storytellers.
-
-Some of our customers:
-
-.. image:: ./_static/parsely_customers.png
-    :width: 98%
-    :align: center
-
-Elegant data dashboards
-=======================
-
-Informing thousands of editors and writers every day:
-
-.. image:: ./_static/glimpse.png
-    :width: 98%
-    :align: center
-
-Powerful data APIs
-==================
-
-Powering billions of site visits every month:
-
-.. image:: ./_static/newyorker_related.png
-    :width: 98%
-    :align: center
-
-What is Storm?
-==============
-
-.. image:: ./_static/storm_applied.png
-    :width: 90%
-    :align: center
-
-Why should I care?
-==================
-
-- Defeat the GIL!
-- Avoid Threads
-- Horizontally Scale CPUs
-- Built-in Data Reliability
-- Log-Oriented Architecture
-- Impress Your Friends
-
-Python Can't Scale?
-===================
-
-Eat that:
-
-.. image:: ./_static/cpu_cores.png
-    :width: 90%
-    :align: center
-
-Motivating for streamparse
-==========================
-
-.. image:: ./_static/streamparse_logo.png
-
-streamparse lets you parse real-time streams of data.
-
-It smoothly integrates Python code with Apache Storm.
-
-Easy quickstart, good CLI/tooling, production tested.
-
-Good for: Analytics, Logs, Sensors, Low-Latency Stuff.
-
-Agenda
-======
-
-* Why is time series data hard?
-* How does Storm work?
-* How does Python integrate with Storm?
-* streamparse design
-* pykafka preview
-
-Admin
-=====
-
-Again, **@amontalenti** on Twitter.
-
-I've scheduled a few tweets to go out during my talk
-with links to all the stuff related to my talk:
-
-- http://parse.ly/code
-- http://parse.ly/slides/streamparse
-- http://parse.ly/slides/streamparse/notes
-
-========================
-Time Series Data is Hard
-========================
-
-Velocity
-========
-
-Many posts get **millions of page views per hour**.
-
-.. image:: ./_static/pulse.png
-    :width: 60%
-    :align: center
-
-Volume
-======
-
-Top publishers write **1000's of posts per day**.
-
-.. image:: ./_static/sparklines_multiple.png
-    :width: 90%
-    :align: center
-
-Veracity
-========
-
-People need to **make decisions** based on our data:
-
-.. image:: ./_static/comparative.png
-    :width: 90%
-    :align: center
-
-=======================
-From "workers" to Storm
-=======================
 
 Python GIL
 ==========
@@ -214,9 +86,129 @@ We read:
 
 "Storm is a **distributed real-time computation system**."
 
+Dramatically simplifies your Python workers and queues.
+
 "Great," we thought. "But, what about Python support?"
 
-Hmm... we'll get there.
+That's what streamparse is about.
+
+==================
+Our Storm Use Case
+==================
+
+What is Parse.ly?
+=================
+
+Web content analytics for digital storytellers.
+
+Some of our customers:
+
+.. image:: ./_static/parsely_customers.png
+    :width: 98%
+    :align: center
+
+Elegant data dashboards
+=======================
+
+Informing thousands of editors and writers every day:
+
+.. image:: ./_static/glimpse.png
+    :width: 98%
+    :align: center
+
+Powerful data APIs
+==================
+
+Powering billions of site visits every month:
+
+.. image:: ./_static/newyorker_related.png
+    :width: 98%
+    :align: center
+
+Velocity
+========
+
+Many posts get **millions of page views per hour**.
+
+.. image:: ./_static/pulse.png
+    :width: 60%
+    :align: center
+
+Volume
+======
+
+Top publishers write **1000's of posts per day**.
+
+.. image:: ./_static/sparklines_multiple.png
+    :width: 90%
+    :align: center
+
+Veracity
+========
+
+People need to **make decisions** based on our data:
+
+.. image:: ./_static/comparative.png
+    :width: 90%
+    :align: center
+
+"Python Can't Do This"
+======================
+
+"Free lunch is over."
+
+"It can't scale."
+
+"It's a toy language."
+
+**"Shoulda used Scala."**
+
+Python Can't Scale?
+===================
+
+Eat that, losers:
+
+.. image:: ./_static/cpu_cores.png
+    :width: 90%
+    :align: center
+
+Thanks to Storm
+===============
+
+.. image:: ./_static/storm_applied.png
+    :width: 90%
+    :align: center
+
+streamparse is Pythonic Storm
+=============================
+
+.. image:: ./_static/streamparse_logo.png
+
+streamparse lets you parse real-time streams of data.
+
+It smoothly integrates Python code with Apache Storm.
+
+Easy quickstart, good CLI/tooling, production tested.
+
+Good for: Analytics, Logs, Sensors, Low-Latency Stuff.
+
+Agenda
+======
+
+* Storm topology concepts
+* Storm cluster internals
+* How does Python work with Storm?
+* streamparse overview
+* pykafka preview
+
+Slides on Twitter; follow **@amontalenti**.
+
+- Slides: http://parse.ly/slides/streamparse
+- Notes: http://parse.ly/slides/streamparse/notes
+
+=======================
+Storm Topology Concepts
+=======================
 
 First, Some Storm Concepts
 ==========================
@@ -351,6 +343,10 @@ Streams, Grouping, Parallelism
                        p=1)
         ]
 
+=======================
+Storm Cluster Internals
+=======================
+
 Wired Topology
 ==============
 
@@ -470,35 +466,24 @@ Java-like, and not very "Pythonic".
 Storm Java Quirks
 =================
 
-- Topologies specified using a Java builder interface (eek).
-- Topologies built from CLI using Maven tasks (yuck).
-- Topology submission needs a JAR of your code (ugh).
-- No simple interactive or local dev workflow built-in (boo).
-- Talking to the Storm cluster uses Thrift interfaces (shrug).
-
-Java Projects Need Not Stink
-============================
-
-Consider Cassandra, Zookeeper, or Elasticsearch.
-
-These aren't "projects for Java developers".
-
-They are "cross-language system infrastructure..."
-
-"... that happens to be written in Java."
+- Topology Java builder interface (eek).
+- Projects "built" with Maven tasks (yuck).
+- Deployment needs a JAR of your code (ugh).
+- No simple local dev workflow built-in (boo).
+- Storm uses Thrift interfaces (shrug).
 
 Storm as Infrastructure
 =======================
 
-One would hope that Storm could attain this same status.
+I'd hope Storm could be like Cassandra/Elasticsearch:
 
-That is: **multi-lang real-time computation infrastructure.**
+Good: **multi-lang data infrastructure.**
 
-Not: **Java real-time computation (some multi-lang support).**
+Bad: **Java data infrastructure (& some multi-lang support).**
 
-Where Python is a **first-class citizen**.
+Need: Python as a **first-class citizen**.
 
-(Storm can solve the GIL at the system level!)
+Payoff: Storm can solve the GIL at the system level!
 
 ===========================
 Getting Pythonic with Storm
@@ -523,6 +508,8 @@ Storm supports Python through the **multi-lang protocol**.
 - Works via shell-based components
 - Communicate over ``STDIN`` and ``STDOUT``
 
+Clean, UNIX-y: No Jython or Py4J shenanigans.
+
 Kinda quirky, but also relatively simple to implement.
 
 Multi-Lang Protocol (2)
@@ -543,15 +530,15 @@ Multi-Lang Protocol (3)
 =======================
 
 - Tuples serialized by Storm worker into JSON
-- Sent over ``STDIN`` to components
-- Storm worker parses JSON sent over ``STDOUT``
+- Sent over ``STDOUT`` to components
+- Storm worker parses JSON received over ``STDIN``
 - Then sends it to appropriate downstream tasks
-- This is the Netty/ZeroMQ mechanism
+- Netty/ZeroMQ mechanism handles x-node xfer
 
 Multi-Lang Protocol (4)
 =======================
 
-All "core" Storm mechanics supported:
+The multi-lang protocol has the full core:
 
 - ack
 - fail
@@ -561,21 +548,12 @@ All "core" Storm mechanics supported:
 - heartbeat
 - tuple tree
 
-Packaging for Multi-Lang
-========================
+storm.py issues
+===============
 
-Uses JARs.
+Storm bundles "storm.py" (a multi-lang implementation).
 
-"Copy 'storm.py' into your CLASSPATH."
-
-Ugh.
-
-"Javanonic."
-
-streamparse fixes this.
-
-Biggest storm.py issues
-=======================
+But, it stinks.
 
 - No unit tests
 - No documentation
@@ -584,14 +562,24 @@ Biggest storm.py issues
 - Cannot ``pip install``
 - Packaging is a nightmare
 
-"What if we had a Pythonic Storm lib?"
-======================================
+Packaging issues
+================
 
-- Idea was brewing on Parse.ly team in Jan 2014.
-- Backend team had just grown up, new engineers.
-- New engineers had trouble with Storm.
-- I discovered ``storm-test`` and ``Clojure DSL``.
-- Colleague started a clean-house IPC layer.
+Storm "supports arbitrary code", but it's painful.
+
+First, need a JAR of your code (ugh).
+
+Then, "copy 'storm.py' into JAR /resources dir."
+
+Then, "submit your JAR via Nimbus Thrift interface."
+
+Javanonic = Moronic.
+
+Yes, streamparse automates all this.
+
+====================
+streamparse overview
+====================
 
 Enter streamparse
 =================
@@ -641,12 +629,32 @@ You can then run the local Storm topology using::
     storm.daemon.nimbus - Received topology submission with conf {...
     ... lots of output as topology runs...
 
+Submitting to remote cluster
+============================
+
+Single command::
+
+    $ sparse submit
+
+Does all the following magic:
+
+    - Makes virtualenvs cluster-wide
+    - Installs dependencies via ``pip install``
+    - Builds a JAR out of your source code
+    - Opens reverse tunnel to Nimbus
+    - Constructs an in-memory (JVM) Topology
+    - Submits JAR to Nimbus via Thrift
+
 streamparse vs storm.py
 =======================
 
 .. image:: _static/streamparse_comp.png
     :align: center
     :width: 80%
+
+======================
+Let's Make a Topology!
+======================
 
 Word Stream Spout (Storm DSL)
 =============================
@@ -791,9 +799,6 @@ We use for writing to data stores:
 - Cassandra
 - Elasticsearch
 - Redis
-- MongoDB
-
-Background thread handles tuple grouping and timer thread for flushing batches.
 
 Adds **reliable micro-batching** to Storm.
 
@@ -867,9 +872,9 @@ and, you can help!
 Questions?
 ==========
 
-Check out streamparse on Github.
-
 I'm here at sprints Monday and Tuesday.
+
+streamparse: http://github.com/Parsely/streamparse
 
 Parse.ly's hiring: http://parse.ly/jobs
 
