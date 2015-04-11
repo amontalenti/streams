@@ -174,7 +174,7 @@ Agenda
 ======
 
 * Storm topology concepts
-* Storm cluster internals
+* Storm internals
 * How does Python work with Storm?
 * streamparse overview
 * pykafka preview
@@ -285,19 +285,15 @@ Directed Acyclic Graph (DAG) describing it all.
     spout = Words
     bolts = [WordCount, DebugPrint]
 
-    # init components
-    spout = init(spout)
-    bolts = [init(bolt) for bolt in bolts]
-
     # wire topology
     topology = wire(spout=spout, bolts=bolts)
 
     # start the topology
     next(topology)
 
-=======================
-Storm Cluster Internals
-=======================
+===============
+Storm Internals
+===============
 
 Wired Topology
 ==============
@@ -323,9 +319,11 @@ Streams, Grouping and Parallelism
 ================ ================= =======================
 X                word-spout        word-count-bolt
 ================ ================= =======================
+input            None              word-spout
+output           word-count-bolt   None
 tuple            ``("dog",)``      ``("dog", 4")``
 stream           ``["word"]``      ``["word", "count"]``
-grouping         ``"word"``        ``":shuffle"``
+grouping         ``["word"]``      ``":shuffle"``
 parallelism      2                 8
 ================ ================= =======================
 
@@ -430,8 +428,8 @@ Java-like, and not very "Pythonic".
 Storm Java Quirks
 =================
 
-- Topology Java builder interface (eek).
-- Projects "built" with Maven tasks (yuck).
+- Topology Java builder API (eek).
+- Projects built with Maven tasks (yuck).
 - Deployment needs a JAR of your code (ugh).
 - No simple local dev workflow built-in (boo).
 - Storm uses Thrift interfaces (shrug).
@@ -449,19 +447,9 @@ Need: Python as a **first-class citizen**.
 
 Payoff: Storm can solve the GIL at the system level!
 
-===========================
-Getting Pythonic with Storm
-===========================
-
-Python Processes
-================
-
-For a Python programmer, Storm provides a way to get **process-level
-parallelism**, while...
-
-- avoiding perils of multi-threading
-- escaping single-node limit of process pools
-- dodging the complexity of workers-and-queues
+=======================
+Getting Python on Storm
+=======================
 
 Multi-Lang Protocol (1)
 =======================
@@ -672,6 +660,28 @@ Word Count Bolt in Python
             self.emit([word, self.counts[word]])
             self.log('%s: %d' % (word, self.counts[word]))
 
+BatchingBolt (Alternative)
+==========================
+
+.. sourcecode:: python
+
+    from streamparse.bolt import BatchingBolt
+
+    class WordCount(BatchingBolt):
+
+        secs_between_batches = 5
+
+        def group_key(self, tup):
+            # collect batches of words
+            word = tup.values[0]
+            return word
+
+        def process_batch(self, key, tups):
+            # emit the count of words we had per 5s batch
+            self.emit([key, len(tups)])
+
+This implements **5-second micro-batches**.
+
 streamparse config.json
 =======================
 
@@ -722,37 +732,6 @@ sparse options
             sparse (-h | --help)
             sparse --version
 
-BatchingBolt
-============
-
-.. sourcecode:: python
-
-    from streamparse.bolt import BatchingBolt
-
-    class WordCount(BatchingBolt):
-
-        secs_between_batches = 5
-
-        def group_key(self, tup):
-            # collect batches of words
-            word = tup.values[0]
-            return word
-
-        def process_batch(self, key, tups):
-            # emit the count of words we had per 5s batch
-            self.emit([key, len(tups)])
-
-Use cases for BatchingBolt
-==========================
-
-We use for writing to data stores:
-
-- Cassandra
-- Elasticsearch
-- Redis
-
-Adds **reliable micro-batching** to Storm.
-
 ===============
 pykafka preview
 ===============
@@ -786,30 +765,12 @@ Upgraded internal Kafka 0.7 driver to 0.8.2:
 
 https://github.com/Parsely/pykafka
 
-========================
-Sprinting on streamparse
-========================
-
-Python Topology DSL?
-====================
-
-"What I'm proposing instead is to ditch the idea of specifying topologies via
-configuration files and do it instead via an interpreted general purpose
-programming language (like Python)."
-
-Comments recently by Nathan Marz in `STORM-561`_.
-
-.. _STORM-561: https://issues.apache.org/jira/browse/STORM-561
-
-I really want to build this...
-==============================
-
-and, you can help!
-
 Questions?
 ==========
 
-I'm here at sprints Monday and Tuesday.
+I'm sprinting on a Python Storm Topology DSL.
+
+Hacking on Monday and Tuesday. Join me!
 
 streamparse: http://github.com/Parsely/streamparse
 
@@ -817,12 +778,7 @@ Parse.ly's hiring: http://parse.ly/jobs
 
 Find me on Twitter: http://twitter.com/amontalenti
 
-Fin
-===
-
-.. image:: ./_static/big_diagram.png
-    :width: 80%
-    :align: center
+That's it!
 
 ========
 Appendix
@@ -833,6 +789,13 @@ Organizing Around Logs
 
 .. image:: ./_static/streamparse_reference.png
     :width: 90%
+    :align: center
+
+Overall Architecture
+====================
+
+.. image:: ./_static/big_diagram.png
+    :width: 80%
     :align: center
 
 Multi-Lang Impl's in Python
