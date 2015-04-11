@@ -2,7 +2,7 @@
 streamparse
 ===========
 
-A Pythonista navigating Stormy waters.
+*Defeat the Python GIL with Apache Storm.*
 
 Andrew Montalenti, CTO
 
@@ -95,6 +95,17 @@ It smoothly integrates Python code with Apache Storm.
 
 Easy quickstart, good CLI/tooling, production tested.
 
+Good for: Analytics, Logs, Sensors, Low-Latency Stuff.
+
+Agenda
+======
+
+* Why is time series data hard?
+* How does Storm work?
+* How does Python integrate with Storm?
+* streamparse design
+* pykafka preview
+
 Admin
 =====
 
@@ -107,18 +118,9 @@ with links to all the stuff related to my talk:
 - http://parse.ly/slides/streamparse
 - http://parse.ly/slides/streamparse/notes
 
-Agenda
-======
-
-* Why is time series data hard?
-* How does Storm work?
-* How does Python integrate with Storm?
-* stremaparse design and internals
-* Logs and Kafka (pykafka preview)
-
-==========================
-Time Series Data Challenge
-==========================
+========================
+Time Series Data is Hard
+========================
 
 Velocity
 ========
@@ -165,12 +167,45 @@ Benchmarks
 From "workers" to Storm
 =======================
 
+Python GIL
+==========
+
+Python's GIL does not allow true multi-thread parallelism:
+
+.. image:: _static/python_gil_new.png
+    :align: center
+    :width: 80%
+
+And on multi-core, it even leads to lock contention:
+
+.. image:: _static/python_gil.png
+    :align: center
+    :width: 80%
+
+`@dabeaz`_ discussed this in a Friday talk on concurrency.
+
+.. _@dabeaz: http://twitter.com/dabeaz
+
+Queues and workers
+==================
+
+.. rst-class:: spaced
+
+    .. image:: /_static/queues_and_workers.png
+        :width: 90%
+        :align: center
+
+**Queues**: ZeroMQ => Redis => RabbitMQ
+
+**Workers**: Cron Jobs => RQ => Celery
+
 Parse.ly Architecture, 2012
 ===========================
 
 .. image:: /_static/tech_stack.png
     :width: 90%
     :align: center
+
 
 It started to get messy
 =======================
@@ -179,12 +214,18 @@ It started to get messy
     :width: 90%
     :align: center
 
+As Hettinger Says...
+====================
+
+"There must be a better way..."
+
 Organizing Around Logs
 ======================
 
 .. image:: ./_static/streamparse_reference.png
     :width: 90%
     :align: center
+
 
 What is this Storm thing?
 =========================
@@ -195,18 +236,18 @@ We read:
 
 "Great," we thought. "But, what about Python support?"
 
-Hmm...
+Hmm... we'll get there.
 
-Storm Concepts
-==============
+First, Some Storm Concepts
+==========================
 
 Storm provides an abstraction for cluster computing:
 
 - Tuple
 - Spout
 - Bolt
-- Stream
 - Topology
+- Stream
 
 Wired Topology
 ==============
@@ -220,9 +261,11 @@ Wired Topology
 WARNING
 =======
 
-All the code in the following 5 slides or so is pseudocode.
+All the code in the following 7 slides is pseudocode.
 
-**Just meant to illustrate Storm ideas.**
+"Mock" version of Storm using Python coroutines.
+
+**It's just meant to illustrate Storm ideas.**
 
 Tuple
 =====
@@ -243,44 +286,102 @@ A source of tuples emitted into a cluster.
 
 .. sourcecode:: python
 
-    # spout spec: "word-spout"
-    while num_tuples < max_num_tuples:
-        one_tuple = kafka.get()
-        storm.emit(one_tuple, "word-count-bolt")
-        time.sleep(1)
+    class Spout(object):
+        def next_tuple():
+            """Called repeatedly to emit tuples."""
+
+    @coroutine
+    def spout_coroutine(spout, target=None):
+        """Get tuple from Spout and send it on."""
+        while True:
+            tup = spout.next_tuple()
+            if tup is None:
+                time.sleep(10)
+                continue
+            target.send(tup)
 
 Bolt
 ====
 
-A processing node in your cluster's computation.
+A processing stage in your computation.
 
 .. sourcecode:: python
 
-    # bolt spec: "first-bolt"
-    while True:
-        word = storm.recv("word-spout")
-        word_count = word_count_bolt.process(word)
-        storm.ack(word)
-        storm.emit(word_count, "debug-print-bolt")
-        time.sleep(1)
+    class Bolt(object):
+        def process(tuple):
+            """Called repeatedly to process tuples."""
 
-Stream
-======
-
-A flow of tuples between two components (Bolts or Spouts).
-
-.. sourcecode:: python
-
-    stream_spec = ["word", "count"]:
-    stream_wiring = ("first-spout",
-                     # =>
-                     "first-bolt")
-    stream_grouping = "word" # or, ":shuffle"
+    @coroutine
+    def bolt_coroutine(bolt, target=None):
+        """Get tuple from Component, process it in Bolt.
+           Then send it to next Component, if it exists."""
+        while True:
+            tup = (yield)
+            if tup is None:
+                time.sleep(10)
+                continue
+            to_emit = bolt.process(tup)
+            if target is not None:
+                target.send(to_emit)
 
 Topology
 ========
 
 Directed Acyclic Graph (DAG) describing it all.
+
+.. sourcecode:: python
+
+    # lay out topology
+    spout = Words
+    bolts = [WordCount, DebugPrint]
+
+    # init components
+    spout = init(spout)
+    bolts = [init(bolt) for bolt in bolts]
+
+    # wire topology
+    topology = wire(spout=spout, bolts=bolts)
+
+    # start the topology
+    next(topology)
+
+Topology Wiring
+===============
+
+.. sourcecode:: python
+
+    def wire(spout=None, bolts=None):
+        """Wire the Components together in a pipeline.
+        Return the Spout coroutine that kicks it off."""
+        last, target = None, None
+        for bolt in reversed(bolts):
+            step = bolt_coroutine(bolt)
+            if last is None:
+                last = step
+                continue
+            else:
+                step = bolt_coroutine(bolt, target=last)
+                last = step
+        return spout_coroutine(spout, target=last)
+
+Stream
+======
+
+A specific dataflow of tuples between two components.
+
+Flow is between Spout => Bolt, or between Bolts.
+
+.. sourcecode:: python
+
+    stream_spec = ["word"]:
+    stream_wiring = {"word-spout":
+                     # =>
+                     "word-count-bolt"}
+    stream_grouping = "word" # or, ":shuffle"
+
+
+Fancier Topology DSL Sketch
+===========================
 
 .. sourcecode:: python
 
@@ -299,6 +400,24 @@ Directed Acyclic Graph (DAG) describing it all.
                        from=WordCount,
                        p=1)
         ]
+
+Wired Topology
+==============
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/topology.png
+        :width: 80%
+        :align: center
+
+Tuple Tree
+==========
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/wordcount.png
+        :width: 70%
+        :align: center
 
 Running in Storm UI
 ===================
@@ -347,10 +466,7 @@ Reviewed in `Storm, The Big Reference`_.
     :width: 50%
     :align: center
 
-TODO: change blog post link
-
-.. _Storm, The Big Reference: http://parse.ly
-
+.. _Storm, The Big Reference: http://blog.parsely.com/post/1271/storm/
 
 Network Transfer of Tuples
 ==========================
@@ -361,8 +477,8 @@ Network Transfer of Tuples
         :width: 90%
         :align: center
 
-Finally, Persist Your Calculations
-==================================
+Bolts May Have Side Effects
+===========================
 
 .. rst-class:: spaced
 
@@ -370,18 +486,19 @@ Finally, Persist Your Calculations
         :width: 80%
         :align: center
 
-
 So, Storm is Sorta Amazing!
 ==========================
 
-Storm will:
+Storm...
 
-- allocate Python process slots on physical nodes
-- map a computation DAG onto those slots automatically
-- guarantee processing of tuples with an ack/fail model
-- let us rebalance computation evenly among nodes
+- allocates **Python process slots** on physical nodes
+- handles **lightweight queuing automatically**
+- does **tuneable parallelism** per component
+- will **guarantee processing** of tuples with ack/fail
+- implements a **high availability** model
+- helps us **rebalance computation** across cluster
 
-Beat the GIL and scale Python horizontally with ease!
+And, it **beats the GIL**!
 
 Let's Do This!
 ==============
@@ -433,25 +550,6 @@ Where Python is a **first-class citizen**.
 
 (Storm can solve the GIL at the system level!)
 
-Python GIL
-==========
-
-Python's GIL does not allow true multi-thread parallelism:
-
-.. image:: _static/python_gil_new.png
-    :align: center
-    :width: 80%
-
-And on multi-core, it even leads to lock contention:
-
-.. image:: _static/python_gil.png
-    :align: center
-    :width: 80%
-
-`@dabeaz`_ discussed this in a Friday talk on concurrency.
-
-.. _@dabeaz: http://twitter.com/dabeaz
-
 ===========================
 Getting Pythonic with Storm
 ===========================
@@ -460,44 +558,58 @@ Python Processes
 ================
 
 For a Python programmer, Storm provides a way to get **process-level
-parallelism** while avoiding the perils of multi-threading.
+parallelism**, while...
 
-Sweet!
-
-This is like Celery, RQ, multiprocessing, joblib, but with the added benefit of
-**data flows** and **reliability**.
-
-We'll take it!
+- avoiding perils of multi-threading
+- escaping single-node limit of process pools
+- dodging the complexity of workers-and-queues
 
 Multi-Lang Protocol (1)
 =======================
 
-Storm supports multiple languages through the **multi-lang protocol**.
+Storm supports Python through the **multi-lang protocol**.
 
-JSON protocol that works via shell-based components that communicate over
-``STDIN`` and ``STDOUT``.
+- JSON protocol
+- Works via shell-based components
+- Communicate over ``STDIN`` and ``STDOUT``
 
 Kinda quirky, but also relatively simple to implement.
 
 Multi-Lang Protocol (2)
 =======================
 
-Each component of a Storm topology is either a ``ShellSpout`` or ``ShellBolt``.
+Each component of a "Python" Storm topology is either:
 
-Storm worker invokes **one sub-process per shell component per Storm task**.
+- ``ShellSpout``
+- ``ShellBolt``
 
-If ``p = 8``, then 8 Python processes are spawned under a worker.
+Java implementations speak to Python via light JSON.
+
+There's **one sub-process per Storm task**.
+
+If ``p = 8``, then **8 Python processes** are spawned.
 
 Multi-Lang Protocol (3)
 =======================
 
-Storm Tuples are serialized by Storm worker process into JSON, sent over
-``STDIN`` to components.
+- Tuples serialized by Storm worker into JSON
+- Sent over ``STDIN`` to components
+- Storm worker parses JSON sent over ``STDOUT``
+- Then sends it to appropriate downstream tasks
+- This is the Netty/ZeroMQ mechanism
 
-Storm worker process also parses JSON output sent over ``STDOUT`` and then
-sends it to appropriate downstream tasks via Netty/ZeroMQ mechanism.
+Multi-Lang Protocol (4)
+=======================
 
-All non-Trident mechanics supported: tuple tree, ack/fail.
+All "core" Storm mechanics supported:
+
+- ack
+- fail
+- emit
+- anchor
+- log
+- heartbeat
+- tuple tree
 
 Packaging for Multi-Lang
 ========================
@@ -513,7 +625,7 @@ of there.
 When using the bundled module, you **copy-paste** ``storm.py`` adapter in
 your ``/resources`` directory and ``import storm`` to speak the protocol.
 
-Very Javanonic.
+Very Javanonic. Boo!
 
 Biggest storm.py issues
 =======================
@@ -543,11 +655,9 @@ Talk, `"Real-Time Streams and Logs"`_, introduced it.
 
 600+ stars `on Github`_, was a trending repo in May 2014.
 
-80+ mailing list members and 4 new committers.
+90+ mailing list members and 5 new committers.
 
-Two Parse.ly engineers maintaining it.
-
-Major corporate and academic entities using it.
+3 Parse.ly engineers started maintaining it.
 
 Funding `from DARPA`_ to continue developing it. (Yes, really!)
 
@@ -591,8 +701,8 @@ streamparse vs storm.py
     :align: center
     :width: 80%
 
-Word Stream Spout (Storm)
-=========================
+Word Stream Spout (Storm DSL)
+=============================
 
 .. sourcecode:: clojure
 
@@ -622,8 +732,8 @@ Word Stream Spout in Python
             word = next(self.words)
             self.emit([word])
 
-Word Count Bolt (Storm)
-=======================
+Word Count Bolt (Storm DSL)
+===========================
 
 .. sourcecode:: clojure
 
@@ -656,8 +766,8 @@ Word Count Bolt in Python
             self.emit([word, self.counts[word]])
             self.log('%s: %d' % (word, self.counts[word]))
 
-config.json
-===========
+streamparse config.json
+=======================
 
 .. sourcecode:: javascript
 
@@ -694,13 +804,13 @@ But wait, there's more!
 
 Got it into production in the summer of 2014.
 
-The effort just snowballed from there.
-
 Added a lot more functionality to the CLI tools.
 
 IPC layer saw Pythonic improvements.
 
-Better support for logging.
+1.0 release in early 2015.
+
+Recent improved support for logging/monitoring.
 
 A solid ``BatchingBolt`` implementation.
 
@@ -708,8 +818,6 @@ Several ``auto_`` class options.
 
 sparse options
 ==============
-
-TODO: add sparse stats
 
 .. sourcecode:: text
 
@@ -790,15 +898,25 @@ auto_anchor   anchor tuple via incoming tuple ID
             word = tup.values[0]
             self.emit([word])
 
-======================
-Organizing around logs
-======================
+===============
+pykafka preview
+===============
+
+Apache Kafka
+============
+
+"Messaging rethought as a commit log."
+
+Distributed ``tail -f``.
+
+Good fit for at-least-once processing.
+
+Able to keep up with Storm's high-throughput processing.
+
+Great for handling backpressure during traffic spikes.
 
 Kafka and Multi-consumer
 ========================
-
-Even if Kafka's availability and scalability story isn't interesting to you,
-the **multi-consumer story should be**.
 
 .. image:: ./_static/multiconsumer.png
     :width: 60%
@@ -807,64 +925,29 @@ the **multi-consumer story should be**.
 Kafka Consumer Groups
 =====================
 
-Consumer groups let you consume a large stream in a partitioned and balanced way.
-
-Leverage multi-core and multi-node parallelism in Storm Spouts.
-
 .. image:: ./_static/consumer_groups.png
     :width: 60%
     :align: center
 
-Kafka + Storm
-=============
-
-Good fit for at-least-once processing.
-
-No need for out-of-order acks.
-
-Community work is ongoing for at-most-once processing.
-
-Able to keep up with Storm's high-throughput processing.
-
-Great for handling backpressure during traffic spikes.
-
 pykafka
 =======
 
-Resurrecting our own project, ``samsa``, renamed as ``pykafka``.
+We have released ``pykafka``.
 
-- For Kafka 0.8.2
-- SimpleConsumer **and** BalancedConsumer (with consumer groups)
+(Not to be confused with ``kafka-python``.)
+
+Upgraded internal Kafka 0.7 driver to 0.8.2:
+
+- SimpleConsumer **and** BalancedConsumer
+- Consumer Groups with Zookeeper
 - Pure Python protocol implementation
-- C protocol implementation (via librdkafka)
+- C protocol implementation in works (via librdkafka)
 
 https://github.com/Parsely/pykafka
 
-Kafka in future ``streamparse`` releases
-========================================
-
-Hope to bundle a ``KafkaSpout`` and ``KafkaBolt``, written in Python.
-
-Add a soft dependency to ``pykafka``.
-
-Clearly, Kafka Matters
-======================
-
-============= ========= ========
-Company       Logs      Workers
-============= ========= ========
-LinkedIn      Kafka*    Samza
-Twitter       Kafka     Storm*
-Pinterest     Kafka     Storm
-Spotify       Kafka     Storm
-Wikipedia     Kafka     Storm
-Yahoo         Kafka     Storm
-Netflix       Kafka     ???
-============= ========= ========
-
-===================
-Recent Developments
-===================
+========================
+Sprinting on streamparse
+========================
 
 Python Topology DSL?
 ====================
@@ -878,28 +961,23 @@ without having to do a compilation."
 
 Comments recently by Nathan Marz in `STORM-561`_.
 
-P. Taylor Goetz responded to it by creating `flux`_.
-
 .. _STORM-561: https://issues.apache.org/jira/browse/STORM-561
-.. _flux: https://github.com/ptgoetz/flux
 
-pystorm
-=======
+I really want to build this...
+==============================
 
-...
+and, you can help!
 
 Questions?
 ==========
 
-Go forth and stream!
+Check out streamparse on Github.
 
-Looking for a job where you can work from home?
+I'm here at sprints Monday and Tuesday.
 
-We're `hiring`_!
+Parse.ly's hiring: http://parse.ly/jobs
 
-Parse.ly on Twitter: `@Parsely`_
-
-Me on Twitter: `@amontalenti`_
+Find me on Twitter: http://twitter.com/amontalenti
 
 ========
 Appendix
@@ -908,32 +986,35 @@ Appendix
 Multi-Lang Impl's in Python
 ===========================
 
-- `storm.py`_ (Storm, XXX 2010)
-- `Petrel`_ (AirSage, XXX 2010)
+- `storm.py`_ (Storm, 2010)
+- `Petrel`_ (AirSage, Dec 2012)
 - `streamparse`_ (Parse.ly, Apr 2014)
 - `pyleus`_ (Yelp, Oct 2014)
 
-TODO: fix these links.
+Plans to unify IPC implementations around **pystorm**.
 
-Plan to unify around pystorm.
-
-.. _Petrel: http://github.com/AirSage/Petrel
-.. _pyleus: http://engineeringblog.yelp.com/2014/10/introducing-pyleus.html
+.. _storm.py: https://github.com/apache/storm/blob/master/storm-core/src/multilang/py/storm.py
+.. _Petrel: https://github.com/AirSage/Petrel
+.. _pyleus: https://github.com/Yelp/pyleus
 .. _streamparse: http://github.com/Parsely/streamparse
+
+Other Related Projects
+======================
+
+- `lein`_ - Clojure dependency manager used by streamparse
+- `flux`_ - YAML Topology runner
+- `Clojure DSL`_ - Topology DSL, bundled with Storm
+- `Trident`_ - Java "high-level" DSL, bundled with Storm
+
+streamparse uses lein and a simplified Clojure DSL.
+
+Will add a Python DSL in 2.x.
+
+.. _lein: http://leiningen.org/
 .. _flux: https://github.com/ptgoetz/flux
-
-Other Projects
-==============
-
-- `flux`_ - YAML
-- `pyleus`_ - YAML (Python-specific)
-- `Petrel`_ - Python
-- `Clojure DSL`_ - Bundled with Storm
-- `Trident`_ - Java "high-level" DSL bundled with Storm
-
-streamparse uses simplified Clojure DSL; will add Python DSL.
-
-.. _hiring: http://parse.ly/jobs
+.. _Clojure DSL: http://storm.apache.org/documentation/Clojure-DSL.html
+.. _Trident: https://storm.apache.org/documentation/Trident-tutorial.html
+.. _marceline: https://github.com/yieldbot/marceline
 .. _@Parsely: http://twitter.com/Parsely
 .. _@amontalenti: http://twitter.com/amontalenti
 
