@@ -188,10 +188,10 @@ Slides on Twitter; follow **@amontalenti**.
 Storm Topology Concepts
 =======================
 
-First, Some Storm Concepts
-==========================
+Storm Abstractions
+==================
 
-Storm provides an abstraction for cluster computing:
+Storm provides abstractions for data processing:
 
 - Tuple
 - Spout
@@ -321,14 +321,13 @@ Streams, Grouping and Parallelism
 =================================
 
 ================ ================= =======================
-component        word-spout        word-count-bolt
+X                word-spout        word-count-bolt
 ================ ================= =======================
 tuple            ``("dog",)``      ``("dog", 4")``
 stream           ``["word"]``      ``["word", "count"]``
 grouping         ``"word"``        ``":shuffle"``
 parallelism      2                 8
 ================ ================= =======================
-
 
 Running in Storm UI
 ===================
@@ -500,19 +499,6 @@ Multi-Lang Protocol (3)
 - Then sends it to appropriate downstream tasks
 - Netty/ZeroMQ mechanism handles x-node xfer
 
-Multi-Lang Protocol (4)
-=======================
-
-The multi-lang protocol has the full core:
-
-- ack
-- fail
-- emit
-- anchor
-- log
-- heartbeat
-- tuple tree
-
 storm.py issues
 ===============
 
@@ -642,7 +628,7 @@ Word Stream Spout in Python
 
     from streamparse.spout import Spout
 
-    class WordSpout(Spout):
+    class Words(Spout):
 
         def initialize(self, conf, ctx):
             self.words = itertools.cycle(['dog', 'cat',
@@ -657,9 +643,9 @@ Word Count Bolt (Storm DSL)
 
 .. sourcecode:: clojure
 
-    {"count-bolt" (python-bolt-spec
+    {"word-count-bolt" (python-bolt-spec
             options
-            {"word-spout" :shuffle}
+            {"word-spout" ["word"]}
             "bolts.wordcount.WordCount"
              ["word" "count"]
              :p 2
@@ -675,7 +661,7 @@ Word Count Bolt in Python
 
     from streamparse.bolt import Bolt
 
-    class WordCounter(Bolt):
+    class WordCount(Bolt):
 
         def initialize(self, conf, ctx):
             self.counts = Counter()
@@ -743,7 +729,7 @@ BatchingBolt
 
     from streamparse.bolt import BatchingBolt
 
-    class WordCounterBolt(BatchingBolt):
+    class WordCount(BatchingBolt):
 
         secs_between_batches = 5
 
@@ -783,20 +769,6 @@ Perfect fit for Storm Spouts.
 Able to keep up with Storm's high-throughput processing.
 
 Great for handling backpressure during traffic spikes.
-
-Kafka and Multi-consumer
-========================
-
-.. image:: ./_static/multiconsumer.png
-    :width: 60%
-    :align: center
-
-Kafka Consumer Groups
-=====================
-
-.. image:: ./_static/consumer_groups.png
-    :width: 60%
-    :align: center
 
 pykafka
 =======
@@ -939,6 +911,33 @@ Streams, Grouping, Parallelism
                        from=WordCount,
                        p=1)
         ]
+
+Multi-Lang Protocol
+===================
+
+The multi-lang protocol has the full core:
+
+- ack
+- fail
+- emit
+- anchor
+- log
+- heartbeat
+- tuple tree
+
+Kafka and Multi-consumer
+========================
+
+.. image:: ./_static/multiconsumer.png
+    :width: 60%
+    :align: center
+
+Kafka Consumer Groups
+=====================
+
+.. image:: ./_static/consumer_groups.png
+    :width: 60%
+    :align: center
 
 
 .. raw:: html
