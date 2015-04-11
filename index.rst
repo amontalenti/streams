@@ -125,7 +125,7 @@ Time Series Data is Hard
 Velocity
 ========
 
-Average post has **<48-hour shelf life**.
+Many posts get **millions of page views per hour**.
 
 .. image:: ./_static/pulse.png
     :width: 60%
@@ -137,30 +137,16 @@ Volume
 Top publishers write **1000's of posts per day**.
 
 .. image:: ./_static/sparklines_multiple.png
+    :width: 90%
     :align: center
 
-Timeline Aggregation
-====================
+Veracity
+========
 
-.. image:: ./_static/sparklines_stacked.png
-    :align: center
-
-Rollups and Summaries
-=====================
-
-.. image:: ./_static/summary_viz.png
-    :align: center
-
-Rankings and Sparklines
-=======================
+People need to **make decisions** based on our data:
 
 .. image:: ./_static/comparative.png
-    :align: center
-
-Benchmarks
-==========
-
-.. image:: ./_static/benchmarked_viz.png
+    :width: 90%
     :align: center
 
 =======================
@@ -192,8 +178,10 @@ Queues and workers
 .. rst-class:: spaced
 
     .. image:: /_static/queues_and_workers.png
-        :width: 90%
+        :width: 70%
         :align: center
+
+Standard way to solve GIL woes.
 
 **Queues**: ZeroMQ => Redis => RabbitMQ
 
@@ -219,14 +207,6 @@ As Hettinger Says...
 
 "There must be a better way..."
 
-Organizing Around Logs
-======================
-
-.. image:: ./_static/streamparse_reference.png
-    :width: 90%
-    :align: center
-
-
 What is this Storm thing?
 =========================
 
@@ -248,6 +228,8 @@ Storm provides an abstraction for cluster computing:
 - Bolt
 - Topology
 - Stream
+- Grouping
+- Parallelism
 
 Wired Topology
 ==============
@@ -282,7 +264,7 @@ A single data record that flows through your cluster.
 Spout
 =====
 
-A source of tuples emitted into a cluster.
+A component that emits raw data into cluster.
 
 .. sourcecode:: python
 
@@ -291,19 +273,20 @@ A source of tuples emitted into a cluster.
             """Called repeatedly to emit tuples."""
 
     @coroutine
-    def spout_coroutine(spout, target=None):
-        """Get tuple from Spout and send it on."""
+    def spout_coroutine(spout, target):
+        """Get tuple from spout and send it to target."""
         while True:
             tup = spout.next_tuple()
             if tup is None:
                 time.sleep(10)
                 continue
-            target.send(tup)
+            if target is not None:
+                target.send(tup)
 
 Bolt
 ====
 
-A processing stage in your computation.
+A component that implements one processing stage.
 
 .. sourcecode:: python
 
@@ -312,9 +295,9 @@ A processing stage in your computation.
             """Called repeatedly to process tuples."""
 
     @coroutine
-    def bolt_coroutine(bolt, target=None):
-        """Get tuple from Component, process it in Bolt.
-           Then send it to next Component, if it exists."""
+    def bolt_coroutine(bolt, target):
+        """Get tuple from input, process it in Bolt.
+           Then send it to next bolt target, if it exists."""
         while True:
             tup = (yield)
             if tup is None:
@@ -345,43 +328,10 @@ Directed Acyclic Graph (DAG) describing it all.
     # start the topology
     next(topology)
 
-Topology Wiring
-===============
+Streams, Grouping, Parallelism
+==============================
 
-.. sourcecode:: python
-
-    def wire(spout=None, bolts=None):
-        """Wire the Components together in a pipeline.
-        Return the Spout coroutine that kicks it off."""
-        last, target = None, None
-        for bolt in reversed(bolts):
-            step = bolt_coroutine(bolt)
-            if last is None:
-                last = step
-                continue
-            else:
-                step = bolt_coroutine(bolt, target=last)
-                last = step
-        return spout_coroutine(spout, target=last)
-
-Stream
-======
-
-A specific dataflow of tuples between two components.
-
-Flow is between Spout => Bolt, or between Bolts.
-
-.. sourcecode:: python
-
-    stream_spec = ["word"]:
-    stream_wiring = {"word-spout":
-                     # =>
-                     "word-count-bolt"}
-    stream_grouping = "word" # or, ":shuffle"
-
-
-Fancier Topology DSL Sketch
-===========================
+(still pseudocode)
 
 .. sourcecode:: python
 
@@ -395,7 +345,7 @@ Fancier Topology DSL Sketch
                       from=Words,
                       group_on="word",
                       out=["word", "count"],
-                      p=8)
+                      p=8),
             DebugPrint(name="debug-print-bolt",
                        from=WordCount,
                        p=1)
@@ -614,18 +564,15 @@ All "core" Storm mechanics supported:
 Packaging for Multi-Lang
 ========================
 
-Java topologies are simply added to the classpath and appropriate Storm
-classes are instantiated.
+Uses JARs.
 
-Multi-Lang uses the ``/resources`` path in the JAR.
+"Copy 'storm.py' into your CLASSPATH."
 
-Storm will explode ``/resources`` into a scratch area and code will be run out
-of there.
+Ugh.
 
-When using the bundled module, you **copy-paste** ``storm.py`` adapter in
-your ``/resources`` directory and ``import storm`` to speak the protocol.
+"Javanonic."
 
-Very Javanonic. Boo!
+streamparse fixes this.
 
 Biggest storm.py issues
 =======================
@@ -799,23 +746,6 @@ streamparse projects
     :width: 90%
     :align: center
 
-But wait, there's more!
-=======================
-
-Got it into production in the summer of 2014.
-
-Added a lot more functionality to the CLI tools.
-
-IPC layer saw Pythonic improvements.
-
-1.0 release in early 2015.
-
-Recent improved support for logging/monitoring.
-
-A solid ``BatchingBolt`` implementation.
-
-Several ``auto_`` class options.
-
 sparse options
 ==============
 
@@ -830,16 +760,8 @@ sparse options
             sparse list [-e <env>] [-v]
             sparse kill [-e <env>] [-v]
             sparse tail [-e <env>] [--pattern <regex>]
-            sparse visualize [--flip]
             sparse (-h | --help)
             sparse --version
-
-sparse visualize
-================
-
-.. image:: ./_static/streamparse_visualize.png
-    :width: 90%
-    :align: center
 
 BatchingBolt
 ============
@@ -875,29 +797,6 @@ Background thread handles tuple grouping and timer thread for flushing batches.
 
 Adds **reliable micro-batching** to Storm.
 
-``auto_`` properties
-====================
-
-============= ========================================
-property      What it does
-============= ========================================
-auto_ack      ack tuple after ``process``
-auto_fail     fail tuple when exception in ``process``
-auto_anchor   anchor tuple via incoming tuple ID
-============= ========================================
-
-.. sourcecode:: python
-
-    class WordCounter(Bolt):
-
-        auto_fail = False
-        auto_ack = False
-        auto_anchor = False
-
-        def process(self, tup):
-            word = tup.values[0]
-            self.emit([word])
-
 ===============
 pykafka preview
 ===============
@@ -909,7 +808,7 @@ Apache Kafka
 
 Distributed ``tail -f``.
 
-Good fit for at-least-once processing.
+Perfect fit for Storm Spouts.
 
 Able to keep up with Storm's high-throughput processing.
 
@@ -934,7 +833,7 @@ pykafka
 
 We have released ``pykafka``.
 
-(Not to be confused with ``kafka-python``.)
+NOT to be confused with ``kafka-python``.
 
 Upgraded internal Kafka 0.7 driver to 0.8.2:
 
@@ -956,9 +855,6 @@ Python Topology DSL?
 configuration files and do it instead via an interpreted general purpose
 programming language (like Python)."
 
-"By using an interpreted language, you can construct and submit topologies
-without having to do a compilation."
-
 Comments recently by Nathan Marz in `STORM-561`_.
 
 .. _STORM-561: https://issues.apache.org/jira/browse/STORM-561
@@ -979,9 +875,23 @@ Parse.ly's hiring: http://parse.ly/jobs
 
 Find me on Twitter: http://twitter.com/amontalenti
 
+Fin
+===
+
+.. image:: ./_static/big_diagram.png
+    :width: 80%
+    :align: center
+
 ========
 Appendix
 ========
+
+Organizing Around Logs
+======================
+
+.. image:: ./_static/streamparse_reference.png
+    :width: 90%
+    :align: center
 
 Multi-Lang Impl's in Python
 ===========================
@@ -1017,6 +927,26 @@ Will add a Python DSL in 2.x.
 .. _marceline: https://github.com/yieldbot/marceline
 .. _@Parsely: http://twitter.com/Parsely
 .. _@amontalenti: http://twitter.com/amontalenti
+
+Topology Wiring
+===============
+
+.. sourcecode:: python
+
+    def wire(spout, bolts=[]):
+        """Wire the components together in a pipeline.
+        Return the spout coroutine that kicks it off."""
+        last, target = None, None
+        for bolt in reversed(bolts):
+            step = bolt_coroutine(bolt)
+            if last is None:
+                last = step
+                continue
+            else:
+                step = bolt_coroutine(bolt, target=last)
+                last = step
+        return spout_coroutine(spout, target=last)
+
 
 .. raw:: html
 
