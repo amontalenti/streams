@@ -15,11 +15,9 @@ Andrew Montalenti, CTO
 About Me
 ========
 
-- Hacking in Python for over a decade
-- Exile of Wall Street programming in Java
 - CTO/co-founder of Parse.ly
+- Hacking in Python for over a decade
 - Fully distributed team
-- Python all the things
 
 **@amontalenti** on Twitter:
 
@@ -86,7 +84,7 @@ We read:
 
 "Storm is a **distributed real-time computation system**."
 
-Dramatically simplifies your Python workers and queues.
+Dramatically simplifies your workers and queues.
 
 "Great," we thought. "But, what about Python support?"
 
@@ -125,30 +123,10 @@ Powering billions of site visits every month:
     :width: 98%
     :align: center
 
-Velocity
-========
-
-Many posts get **millions of page views per hour**.
-
-.. image:: ./_static/pulse.png
-    :width: 60%
-    :align: center
-
-Volume
-======
-
-Top publishers write **1000's of posts per day**.
+Too many datas!
+===============
 
 .. image:: ./_static/sparklines_multiple.png
-    :width: 90%
-    :align: center
-
-Veracity
-========
-
-People need to **make decisions** based on our data:
-
-.. image:: ./_static/comparative.png
     :width: 90%
     :align: center
 
@@ -219,9 +197,6 @@ Storm provides an abstraction for cluster computing:
 - Spout
 - Bolt
 - Topology
-- Stream
-- Grouping
-- Parallelism
 
 Wired Topology
 ==============
@@ -320,29 +295,6 @@ Directed Acyclic Graph (DAG) describing it all.
     # start the topology
     next(topology)
 
-Streams, Grouping, Parallelism
-==============================
-
-(still pseudocode)
-
-.. sourcecode:: python
-
-    class WordCount(Topology):
-        name = "word-count-topology"
-        spouts = [
-            Words(name="word-spout", out=["word"], p=4)
-        ]
-        bolts = [
-            WordCount(name="word-count-bolt",
-                      from=Words,
-                      group_on="word",
-                      out=["word", "count"],
-                      p=8),
-            DebugPrint(name="debug-print-bolt",
-                       from=WordCount,
-                       p=1)
-        ]
-
 =======================
 Storm Cluster Internals
 =======================
@@ -364,6 +316,19 @@ Tuple Tree
     .. image:: ./_static/wordcount.png
         :width: 70%
         :align: center
+
+Streams, Grouping and Parallelism
+=================================
+
+================ ================= =======================
+component        word-spout        word-count-bolt
+================ ================= =======================
+tuple            ``("dog",)``      ``("dog", 4")``
+stream           ``["word"]``      ``["word", "count"]``
+grouping         ``"word"``        ``":shuffle"``
+parallelism      2                 8
+================ ================= =======================
+
 
 Running in Storm UI
 ===================
@@ -951,6 +916,29 @@ Topology Wiring
                 step = bolt_coroutine(bolt, target=last)
                 last = step
         return spout_coroutine(spout, target=last)
+
+Streams, Grouping, Parallelism
+==============================
+
+(still pseudocode)
+
+.. sourcecode:: python
+
+    class WordCount(Topology):
+        name = "word-count-topology"
+        spouts = [
+            Words(name="word-spout", out=["word"], p=4)
+        ]
+        bolts = [
+            WordCount(name="word-count-bolt",
+                      from=Words,
+                      group_on="word",
+                      out=["word", "count"],
+                      p=8),
+            DebugPrint(name="debug-print-bolt",
+                       from=WordCount,
+                       p=1)
+        ]
 
 
 .. raw:: html
