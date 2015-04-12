@@ -308,7 +308,7 @@ X                word-spout        word-count-bolt
 ================ ================= =======================
 input            None              word-spout
 output           word-count-bolt   None
-tuple            ``("dog",)``      ``("dog", 4")``
+tuple            ``("dog",)``      ``("dog", 4)``
 stream           ``["word"]``      ``["word", "count"]``
 grouping         ``["word"]``      ``":shuffle"``
 parallelism      2                 8
