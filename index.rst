@@ -632,6 +632,16 @@ BatchingBolt for Performance
 
 Implements **5-second micro-batches**.
 
+Bolts for Real-Time ETL
+=======================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_data.png
+        :width: 80%
+        :align: center
+
+
 streamparse config.json
 =======================
 
@@ -858,15 +868,6 @@ Kafka Consumer Groups
 .. image:: ./_static/consumer_groups.png
     :width: 60%
     :align: center
-
-Bolts for Real-Time ETL
-=======================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/storm_data.png
-        :width: 80%
-        :align: center
 
 streamparse projects
 ====================
