@@ -144,7 +144,7 @@ Too many datas!
 Python Can't Scale?
 ===================
 
-Eat that, losers:
+Eat that, haters!
 
 .. image:: ./_static/cpu_cores.png
     :width: 90%
@@ -210,11 +210,7 @@ Wired Topology
 WARNING
 =======
 
-All the code in the following 7 slides is pseudocode.
-
-"Mock" version of Storm using Python coroutines.
-
-**It's just meant to illustrate Storm ideas.**
+Using Python pseudocode and coroutines!
 
 Tuple
 =====
@@ -258,7 +254,7 @@ A component that implements one processing stage.
 .. sourcecode:: python
 
     class Bolt(object):
-        def process(tuple):
+        def process(tup):
             """Called repeatedly to process tuples."""
 
     @coroutine
@@ -282,8 +278,8 @@ Directed Acyclic Graph (DAG) describing it all.
 .. sourcecode:: python
 
     # lay out topology
-    spout = Words
-    bolts = [WordCount, DebugPrint]
+    spout = WordSpout
+    bolts = [WordCountBolt, DebugPrintBolt]
 
     # wire topology
     topology = wire(spout=spout, bolts=bolts)
@@ -294,15 +290,6 @@ Directed Acyclic Graph (DAG) describing it all.
 ===============
 Storm Internals
 ===============
-
-Wired Topology
-==============
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/topology.png
-        :width: 80%
-        :align: center
 
 Tuple Tree
 ==========
@@ -327,7 +314,7 @@ grouping         ``["word"]``      ``":shuffle"``
 parallelism      2                 8
 ================ ================= =======================
 
-Running in Storm UI
+Nimbus and Storm UI
 ===================
 
 .. rst-class:: spaced
@@ -336,8 +323,8 @@ Running in Storm UI
         :width: 98%
         :align: center
 
-Running in Storm Cluster
-========================
+Workers and Zookeeper
+=====================
 
 .. rst-class:: spaced
 
@@ -345,8 +332,8 @@ Running in Storm Cluster
         :width: 80%
         :align: center
 
-Workers and Empty Slots
-=======================
+Empty Slots
+===========
 
 .. rst-class:: spaced
 
@@ -366,7 +353,9 @@ Filled Slots and Rebalancing
 BTW, Buy This Book!
 ===================
 
-Storm Applied, by Manning Press.
+Source of these diagrams.
+
+**Storm Applied**, by Manning Press.
 
 Reviewed in `Storm, The Big Reference`_.
 
@@ -376,8 +365,8 @@ Reviewed in `Storm, The Big Reference`_.
 
 .. _Storm, The Big Reference: http://blog.parsely.com/post/1271/storm/
 
-Network Transfer of Tuples
-==========================
+Network Transfer
+================
 
 .. rst-class:: spaced
 
@@ -385,26 +374,17 @@ Network Transfer of Tuples
         :width: 90%
         :align: center
 
-Bolts May Have Side Effects
-===========================
-
-.. rst-class:: spaced
-
-    .. image:: ./_static/storm_data.png
-        :width: 80%
-        :align: center
-
 So, Storm is Sorta Amazing!
 ==========================
 
 Storm...
 
-- allocates **Python process slots** on physical nodes
-- handles **lightweight queuing automatically**
+- will **guarantee processing** via tuple trees
 - does **tuneable parallelism** per component
-- will **guarantee processing** of tuples with ack/fail
 - implements a **high availability** model
+- allocates **Python process slots** on physical nodes
 - helps us **rebalance computation** across cluster
+- handles **network messaging automatically**
 
 And, it **beats the GIL**!
 
@@ -415,37 +395,7 @@ Let's Do This!
     :width: 90%
     :align: center
 
-================
-Java: Womp, Womp
-================
 
-Storm is "Javanonic"
-====================
-
-Ironic term one of my engineers came up with for a project that feels very
-Java-like, and not very "Pythonic".
-
-Storm Java Quirks
-=================
-
-- Topology Java builder API (eek).
-- Projects built with Maven tasks (yuck).
-- Deployment needs a JAR of your code (ugh).
-- No simple local dev workflow built-in (boo).
-- Storm uses Thrift interfaces (shrug).
-
-Storm as Infrastructure
-=======================
-
-I'd hope Storm could be like Cassandra/Elasticsearch:
-
-Good: **multi-lang data infrastructure.**
-
-Bad: **Java data infrastructure (& some multi-lang support).**
-
-Need: Python as a **first-class citizen**.
-
-Payoff: Storm can solve the GIL at the system level!
 
 =======================
 Getting Python on Storm
@@ -460,7 +410,9 @@ Storm supports Python through the **multi-lang protocol**.
 - Works via shell-based components
 - Communicate over ``STDIN`` and ``STDOUT``
 
-Clean, UNIX-y: No Jython or Py4J shenanigans.
+Clean, UNIX-y.
+
+Can use CPython, PyPy; no need for Jython or Py4J.
 
 Kinda quirky, but also relatively simple to implement.
 
@@ -481,40 +433,36 @@ If ``p = 8``, then **8 Python processes** are spawned.
 Multi-Lang Protocol (3)
 =======================
 
-- Tuples serialized by Storm worker into JSON
-- Sent over ``STDOUT`` to components
-- Storm worker parses JSON received over ``STDIN``
-- Then sends it to appropriate downstream tasks
-- Netty/ZeroMQ mechanism handles x-node xfer
+.. sourcecode:: digraph
+
+    INIT: JVM    => Python   >JSON
+    XFER: JVM    => JVM      >Kryo
+    DATA: JVM    => Python   >JSON
+    EMIT: Python => JVM      >JSON
+    XFER: JVM    => JVM      >Kryo
+     ACK: Python => JVM      >JSON
+    BEAT: JVM    => Python   >JSON
+    SYNC: Python => JVM      >JSON
 
 storm.py issues
 ===============
 
 Storm bundles "storm.py" (a multi-lang implementation).
 
-But, it stinks.
+But, it's not Pythonic.
 
-- No unit tests
-- No documentation
-- No local dev workflow
-- ``print`` statement breaks topology
-- Cannot ``pip install``
-- Packaging is a nightmare
+We'll fix that, we thought!
 
-Packaging issues
-================
+Storm as Infrastructure
+=======================
 
-Storm "supports arbitrary code", but it's painful.
+Thought: Storm should be like Cassandra/Elasticsearch.
 
-First, need a JAR of your code (ugh).
+"Written in Java, but Pythonic nonetheless."
 
-Then, "copy 'storm.py' into JAR /resources dir."
+Need: Python as a **first-class citizen**.
 
-Then, "submit your JAR via Nimbus Thrift interface."
-
-Javanonic = Moronic.
-
-Yes, streamparse automates all this.
+Must also fix "Javanonic" bits (e.g. packaging).
 
 ====================
 streamparse overview
@@ -523,17 +471,15 @@ streamparse overview
 Enter streamparse
 =================
 
-0.1 release at PyData Silicon Valley 2014 in Apr 2014.
-
-Talk, `"Real-Time Streams and Logs"`_, introduced it.
+Initial release Apr 2014; one year of active development.
 
 600+ stars `on Github`_, was a trending repo in May 2014.
 
 90+ mailing list members and 5 new committers.
 
-3 Parse.ly engineers started maintaining it.
+3 Parse.ly engineers maintaining it.
 
-Funding `from DARPA`_ to continue developing it. (Yes, really!)
+Funding `from DARPA`_. (Yes, really!)
 
 .. _"Real-Time Streams and Logs": https://www.youtube.com/watch?v=od8U-XijzlQ
 .. _on Github: https://github.com/Parsely/streamparse
@@ -568,24 +514,27 @@ You can then run the local Storm topology using::
     storm.daemon.nimbus - Received topology submission with conf {...
     ... lots of output as topology runs...
 
+See a `live demo on YouTube`_.
+
+.. _live demo on YouTube: https://youtu.be/od8U-XijzlQ?t=14m19s
+
 Submitting to remote cluster
 ============================
 
-Single command::
+**Single command**::
 
     $ sparse submit
 
-Does all the following magic:
+Does all the following **magic**:
 
-    - Makes virtualenvs cluster-wide
-    - Installs dependencies via ``pip install``
+    - Makes virtualenvs across cluster
     - Builds a JAR out of your source code
     - Opens reverse tunnel to Nimbus
-    - Constructs an in-memory (JVM) Topology
-    - Submits JAR to Nimbus via Thrift
+    - Constructs an in-memory Topology spec
+    - Uploads JAR to Nimbus
 
-streamparse vs storm.py
-=======================
+streamparse supplants storm.py
+==============================
 
 .. image:: _static/streamparse_comp.png
     :align: center
@@ -600,11 +549,10 @@ Word Stream Spout (Storm DSL)
 
 .. sourcecode:: clojure
 
-    {"word-spout" (python-spout-spec
-          options
-          "spouts.words.WordSpout"
-          ["word"]
-          )
+    {"word-spout" (python-spout-spec options
+          "spouts.words.WordSpout" ; class (spout)
+          ["word"]                 ; stream (fields)
+        )
     }
 
 Word Stream Spout in Python
@@ -626,18 +574,19 @@ Word Stream Spout in Python
             word = next(self.words)
             self.emit([word])
 
+Emits one-word tuples from endless generator.
+
 Word Count Bolt (Storm DSL)
 ===========================
 
 .. sourcecode:: clojure
 
-    {"word-count-bolt" (python-bolt-spec
-            options
-            {"word-spout" ["word"]}
-            "bolts.wordcount.WordCount"
-             ["word" "count"]
-             :p 2
-           )
+    {"word-count-bolt" (python-bolt-spec options
+            {"word-spout" ["word"]}     ; input (grouping)
+            "bolts.wordcount.WordCount" ; class (bolt)
+            ["word" "count"]            ; stream (fields)
+            :p 2                        ; parallelism
+        )
     }
 
 Word Count Bolt in Python
@@ -657,11 +606,12 @@ Word Count Bolt in Python
         def process(self, tup):
             word = tup.values[0]
             self.counts[word] += 1
-            self.emit([word, self.counts[word]])
             self.log('%s: %d' % (word, self.counts[word]))
 
-BatchingBolt (Alternative)
-==========================
+Keeps word counts in-memory (assumes grouping).
+
+BatchingBolt for Performance
+============================
 
 .. sourcecode:: python
 
@@ -680,7 +630,7 @@ BatchingBolt (Alternative)
             # emit the count of words we had per 5s batch
             self.emit([key, len(tups)])
 
-This implements **5-second micro-batches**.
+Implements **5-second micro-batches**.
 
 streamparse config.json
 =======================
@@ -688,7 +638,6 @@ streamparse config.json
 .. sourcecode:: javascript
 
     {
-        "topology_specs": "topologies/",
         "envs": {
             "0.8": {
                 "user": "ubuntu",
@@ -707,13 +656,6 @@ streamparse config.json
             }
         }
     }
-
-streamparse projects
-====================
-
-.. image:: ./_static/streamparse_project.png
-    :width: 90%
-    :align: center
 
 sparse options
 ==============
@@ -784,8 +726,8 @@ That's it!
 Appendix
 ========
 
-Organizing Around Logs
-======================
+Storm and Spark Together
+========================
 
 .. image:: ./_static/streamparse_reference.png
     :width: 90%
@@ -860,21 +802,35 @@ Streams, Grouping, Parallelism
 .. sourcecode:: python
 
     class WordCount(Topology):
-        name = "word-count-topology"
         spouts = [
-            Words(name="word-spout", out=["word"], p=4)
+            WordSpout(
+                name="word-spout",
+                out=["word"],
+                p=2)
         ]
         bolts = [
-            WordCount(name="word-count-bolt",
-                      from=Words,
-                      group_on="word",
-                      out=["word", "count"],
-                      p=8),
-            DebugPrint(name="debug-print-bolt",
-                       from=WordCount,
-                       p=1)
+            WordCountBolt(
+                name="word-count-bolt",
+                from=WordSpout,
+                group_on="word",
+                out=["word", "count"],
+                p=8)
         ]
 
+Storm is "Javanonic"
+====================
+
+Ironic term one of my engineers came up with for a project that feels very
+Java-like, and not very "Pythonic".
+
+Storm Java Quirks
+=================
+
+- Topology Java builder API (eek).
+- Projects built with Maven tasks (yuck).
+- Deployment needs a JAR of your code (ugh).
+- No simple local dev workflow built-in (boo).
+- Storm uses Thrift interfaces (shrug).
 Multi-Lang Protocol
 ===================
 
@@ -902,6 +858,21 @@ Kafka Consumer Groups
     :width: 60%
     :align: center
 
+Bolts for Real-Time ETL
+=======================
+
+.. rst-class:: spaced
+
+    .. image:: ./_static/storm_data.png
+        :width: 80%
+        :align: center
+
+streamparse projects
+====================
+
+.. image:: ./_static/streamparse_project.png
+    :width: 90%
+    :align: center
 
 .. raw:: html
 
