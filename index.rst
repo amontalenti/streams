@@ -433,7 +433,7 @@ If ``p = 8``, then **8 Python processes** are spawned.
 Multi-Lang Protocol (3)
 =======================
 
-.. sourcecode:: digraph
+.. sourcecode:: text
 
     INIT: JVM    => Python   >JSON
     XFER: JVM    => JVM      >Kryo
