@@ -375,7 +375,7 @@ Network Transfer
         :align: center
 
 So, Storm is Sorta Amazing!
-==========================
+===========================
 
 Storm...
 
@@ -831,6 +831,7 @@ Storm Java Quirks
 - Deployment needs a JAR of your code (ugh).
 - No simple local dev workflow built-in (boo).
 - Storm uses Thrift interfaces (shrug).
+
 Multi-Lang Protocol
 ===================
 
